@@ -194,16 +194,25 @@ export default function App() {
       return;
     }
 
+    // Always update local state immediately so history tab shows the scan right away
+    setScans(prev => [newScan, ...prev]);
+
     if (isDummy) {
+      // Also persist to localStorage in offline/demo mode
       const updated = [newScan, ...scans];
-      setScans(updated);
       localStorage.setItem(`karnakavach_scans_${user.uid}`, JSON.stringify(updated));
       localStorage.setItem("karnakavach_scans", JSON.stringify(updated));
     } else {
+      // Save to Firestore — the onSnapshot listener will sync back,
+      // but local state is already updated above so the UI is instant
       try {
         await saveScanToFirestore(user.uid, newScan);
       } catch (error) {
         console.error("Failed to commit assessment payload to Firestore:", error);
+        // Keep in local state even if Firestore write failed — persist to localStorage as fallback
+        const fallback = [newScan, ...scans];
+        localStorage.setItem(`karnakavach_scans_${user.uid}`, JSON.stringify(fallback));
+        localStorage.setItem("karnakavach_scans", JSON.stringify(fallback));
       }
     }
   };

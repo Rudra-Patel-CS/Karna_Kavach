@@ -1,8 +1,46 @@
+# Dependencies
 node_modules/
+
+# Build outputs
 build/
 dist/
 coverage/
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# Logs
 *.log
-.env*
+logs/
+
+# ── SECRETS — never commit these ─────────────────────────────────────────────
+# Environment files with real API keys and Firebase credentials
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# Firebase config file that previously held real API keys
+# Real values are now in .env.local — only the safe placeholder is committed
+# Uncomment the next line if you want to block the JSON entirely:
+# firebase-applet-config.json
+
+# ML model artifacts (large binary files, regenerate with train.py)
+karnakavach_backend/models/*.pkl
+
+# Feedback dataset (contains user email data — keep private)
+karnakavach_backend/feedback_dataset.csv
+
+# ML settings
+karnakavach_ml_settings.json
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Keep the example file (safe — no real values)
 !.env.example

@@ -13,10 +13,25 @@ import {
   getDocFromServer,
   Timestamp
 } from "firebase/firestore";
-// import safely with a default fallback to prevent TS complaints
-import firebaseConfig from "../firebase-applet-config.json" with { type: "json" };
 
-const isDummy = firebaseConfig.apiKey.includes("DUMMY_KEY");
+// ── Firebase config is loaded from environment variables (VITE_FIREBASE_*)
+// Real values live in .env.local which is NOT committed to git.
+// See .env.example for the required keys.
+const firebaseConfig = {
+  apiKey:            import.meta.env.VITE_FIREBASE_API_KEY            || "",
+  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN        || "",
+  projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID         || "",
+  storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET     || "",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
+  appId:             import.meta.env.VITE_FIREBASE_APP_ID             || "",
+  measurementId:     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID     || "",
+};
+
+const firestoreDatabaseId: string =
+  import.meta.env.VITE_FIREBASE_DATABASE_ID || "(default)";
+
+// isDummy is true when no real Firebase config is present — app runs in offline simulation mode
+const isDummy = !firebaseConfig.apiKey || firebaseConfig.apiKey === "DUMMY_KEY" || firebaseConfig.apiKey === "";
 
 let app;
 let auth: any = null;
@@ -26,8 +41,7 @@ if (!isDummy) {
   try {
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
     auth = getAuth(app);
-    // Use standard database ID if provided, or fallback
-    db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+    db = getFirestore(app, firestoreDatabaseId);
   } catch (error) {
     console.error("Firebase Initialization Error:", error);
   }

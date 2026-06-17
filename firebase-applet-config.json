@@ -1,10 +1,11 @@
 {
-  "projectId": "bustling-goal-gk8sk",
-  "appId": "1:46459608547:web:89d213a5afe3bec41754d6",
-  "apiKey": "AIzaSyATKCWZlVPmLE9w28XomAqyasSPnyUiGUY",
-  "authDomain": "bustling-goal-gk8sk.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-40dfa2af-0fae-4928-8a3b-28a4dc14518c",
-  "storageBucket": "bustling-goal-gk8sk.firebasestorage.app",
-  "messagingSenderId": "46459608547",
+  "_comment": "All real values have been moved to .env.local — do NOT put secrets here.",
+  "projectId": "CONFIGURED_VIA_ENV",
+  "appId": "CONFIGURED_VIA_ENV",
+  "apiKey": "DUMMY_KEY",
+  "authDomain": "CONFIGURED_VIA_ENV",
+  "firestoreDatabaseId": "CONFIGURED_VIA_ENV",
+  "storageBucket": "CONFIGURED_VIA_ENV",
+  "messagingSenderId": "CONFIGURED_VIA_ENV",
   "measurementId": ""
 }

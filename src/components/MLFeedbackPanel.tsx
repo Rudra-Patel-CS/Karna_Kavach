@@ -106,6 +106,7 @@ export default function MLFeedbackPanel({ scan }: MLFeedbackPanelProps) {
               </p>
               <div className="flex gap-3">
                 <button
+                  type="button"
                   onClick={handleThumbsUp}
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/8 hover:bg-emerald-500/15 text-emerald-400 text-xs font-bold uppercase tracking-wider transition-all group"
                 >
@@ -113,6 +114,7 @@ export default function MLFeedbackPanel({ scan }: MLFeedbackPanelProps) {
                   Correct
                 </button>
                 <button
+                  type="button"
                   onClick={handleThumbsDown}
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-rose-500/30 bg-rose-500/8 hover:bg-rose-500/15 text-rose-400 text-xs font-bold uppercase tracking-wider transition-all group"
                 >
@@ -138,6 +140,7 @@ export default function MLFeedbackPanel({ scan }: MLFeedbackPanelProps) {
               <p className="text-xs font-bold text-on-surface">What is the correct label?</p>
               <div className="flex gap-3">
                 <button
+                  type="button"
                   onClick={() => handleCorrection("Legitimate")}
                   className={`flex-1 py-2.5 rounded-xl border text-xs font-bold uppercase tracking-wider transition-all ${
                     selectedLabel === "Legitimate"
@@ -148,6 +151,7 @@ export default function MLFeedbackPanel({ scan }: MLFeedbackPanelProps) {
                   ✓ Legitimate Email
                 </button>
                 <button
+                  type="button"
                   onClick={() => handleCorrection("Phishing")}
                   className={`flex-1 py-2.5 rounded-xl border text-xs font-bold uppercase tracking-wider transition-all ${
                     selectedLabel === "Phishing"
@@ -159,6 +163,7 @@ export default function MLFeedbackPanel({ scan }: MLFeedbackPanelProps) {
                 </button>
               </div>
               <button
+                type="button"
                 onClick={() => setState("idle")}
                 className="text-[10px] text-outline-variant hover:text-on-surface transition-colors text-center"
               >
@@ -243,6 +248,7 @@ export default function MLFeedbackPanel({ scan }: MLFeedbackPanelProps) {
                 <p className="text-xs">{errorMsg}</p>
               </div>
               <button
+                type="button"
                 onClick={() => setState("idle")}
                 className="text-[10px] text-outline-variant hover:text-on-surface transition-colors shrink-0"
               >
