@@ -1,0 +1,2 @@
+id,sender,subject,body,urls,predicted_label,correct_label,confidence,label_verified,timestamp,source
+8819f113f8608691,test@gmail.com,Test feedback,Hello world test,,Legitimate,Legitimate,75,False,2026-06-17T09:15:34.524812Z,user

@@ -1,0 +1,58 @@
+{
+  "entities": {
+    "Scan": {
+      "title": "Scan",
+      "description": "Phishing detection assessment report payload and outcomes",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The custom identifier for the scan document"
+        },
+        "sender": {
+          "type": "string",
+          "description": "The sender's email or identity string"
+        },
+        "subject": {
+          "type": "string",
+          "description": "Subject of the parsed mail payload"
+        },
+        "body": {
+          "type": "string",
+          "description": "Full plaintext mail or metadata text packet"
+        },
+        "riskScore": {
+          "type": "integer",
+          "description": "Calculated score from 0 to 100"
+        },
+        "riskLevel": {
+          "type": "string",
+          "enum": ["HIGH", "MEDIUM", "LOW"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Linguistic forensic analysis report"
+        },
+        "confidence": {
+          "type": "integer",
+          "description": "AI prediction confidence multiplier percentage"
+        },
+        "userId": {
+          "type": "string",
+          "description": "The unique user authentication identifier"
+        }
+      },
+      "required": ["sender", "subject", "body", "riskScore", "riskLevel", "createdAt", "summary", "confidence", "userId"]
+    }
+  },
+  "firestore": {
+    "/scans/{scanId}": {
+      "schema": "Scan",
+      "description": "Scan assessments indexed by unique report identifier"
+    }
+  }
+}

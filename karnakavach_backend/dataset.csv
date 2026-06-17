@@ -1,0 +1,128 @@
+sender,subject,body,label
+hello@friend.com,Lunch?,Hey want to grab lunch today?,0
+support@paypal-secure-update.com,Urgent: Update your account,Click here to update your account immediately or it will be suspended.,1
+newsletter@medium.com,Top stories,Here are your top stories for today.,0
+admin@netflix-billing.com,Payment failed,Your payment failed. Please update credit card details immediately or lose access.,1
+hr@company.com,Team meeting tomorrow,Please join us for the quarterly review meeting at 10am in conference room B.,0
+security@bankofamerica-verify.net,Verify your identity NOW,Your account has been locked. Click here to verify your identity and restore access.,1
+updates@github.com,New pull request,Someone opened a pull request in your repository. Review it at your convenience.,0
+noreply@amazon-order-confirm.xyz,Order confirmation,Your order has been confirmed. Click to track your shipment now and provide payment.,1
+friend@gmail.com,Photos from the trip,Hey! Attached are the photos from our hiking trip last weekend. Check them out!,0
+billing@microsoft-renewal.info,Subscription expiring,Your Microsoft 365 subscription is expiring. Renew now to avoid disruption.,1
+boss@work.com,Project update,The client approved our proposal. Great work team. Well done everyone.,0
+lottery@winner-prize.com,You have won $1000000,Congratulations! You have been selected as a winner. Claim your prize immediately.,1
+alerts@mybank.com,Your statement is ready,Your monthly account statement is now available to view online.,0
+admin@apple-id-locked.com,Apple ID suspended,Your Apple ID has been disabled due to suspicious activity. Verify immediately.,1
+info@linkedin.com,New connection request,You have a new connection request on LinkedIn from a colleague.,0
+support@irs-refund-alert.com,Tax refund pending,You are eligible for a tax refund of $850. Click here to claim it before it expires.,1
+notifications@slack.com,New message in channel,You have unread messages in your Slack workspace from teammates.,0
+verify@paypal-security-check.net,Unusual login detected,We detected an unusual sign-in to your PayPal account. Verify now or your account will be locked.,1
+team@startup.io,Sprint planning,Our sprint planning session is scheduled for Monday at 9am. Please prepare your updates.,0
+admin@fedex-delivery-notification.com,Package held at customs,Your package is being held. Pay the customs fee immediately to release it or it will be returned.,1
+noreply@twitter.com,Someone liked your tweet,Your tweet received a like from a new follower.,0
+support@chase-secure-login.info,Password reset required,Your Chase account password must be reset immediately due to a security breach. Act now.,1
+newsletter@techcrunch.com,Daily tech digest,Here are today's top technology headlines from TechCrunch.,0
+alert@wellsfargo-update.io,Card blocked,Your Wells Fargo debit card has been temporarily blocked. Click here to unblock it now.,1
+calendar@google.com,Meeting reminder,You have a meeting in 30 minutes. Join Google Meet using the link below.,0
+win@freegift-claim.net,Free gift for you,You have been selected to receive a free gift. No purchase necessary. Claim now immediately.,1
+docs@office365.com,Shared document,Your colleague has shared a document with you in Office 365 for your review.,0
+service@dhl-package-tracking.xyz,Delivery failed,We attempted to deliver your package but nobody was home. Pay fee to schedule redelivery now.,1
+invoices@quickbooks.com,Invoice ready,Your invoice for this month has been generated and is ready to download.,0
+security@gmail-account-warning.com,Gmail account compromised,Your Gmail account was accessed from an unknown device. Secure your account now immediately.,1
+marketing@bestbuy.com,Weekend sale starts now,Check out our biggest sale of the year this weekend only at bestbuy.com.,0
+admin@crypto-wallet-verify.com,Wallet verification needed,Your crypto wallet requires verification. Provide your seed phrase to continue using it.,1
+notifications@zoom.us,Meeting starting soon,Your scheduled Zoom meeting starts in 15 minutes. Click the link to join.,0
+support@instagram-copyright.com,Copyright violation notice,Your Instagram account has been flagged for copyright violation. Appeal immediately or your account will be deleted.,1
+ceo@ourcompany.com,Annual review,Your annual performance review is scheduled for next Tuesday with your manager.,0
+promo@free-amazon-voucher.click,Exclusive Amazon voucher,You have been selected for an exclusive $500 Amazon voucher. Click to redeem today.,1
+no-reply@spotify.com,Your playlist was liked,Someone liked your playlist on Spotify. Check it out.,0
+account@netflix-payment-update.com,Payment method declined,Your Netflix payment was declined. Update your billing information to continue streaming.,1
+hello@colleague.com,Coffee chat?,Hey are you free for a quick coffee chat this afternoon around 3pm?,0
+security@microsoft-office-alert.net,Office 365 license expired,Your Office 365 license has expired. Click here to renew and avoid losing access to your files.,1
+team@jira.com,Issue assigned to you,A new task has been assigned to you in Jira. Please review it when you get a chance.,0
+alert@uber-account-suspended.com,Uber account suspended,Your Uber account has been temporarily suspended. Provide your details to restore access immediately.,1
+reminder@dentist.com,Appointment reminder,This is a reminder for your dental appointment tomorrow at 2pm. Please confirm attendance.,0
+admin@facebook-security-warning.org,Facebook account hacked,Your Facebook account may have been compromised. Verify your identity immediately to secure it.,1
+receipts@stripe.com,Payment received,A payment of $49 has been received in your Stripe account from a customer.,0
+help@support-ticket-urgent.com,Urgent ticket update,Your support ticket requires immediate attention. Click here to respond or your case will be closed.,1
+no-reply@classroom.google.com,New announcement from your class,Your teacher posted a new announcement in Google Classroom. Log in to view it.,0
+no-reply@classroom.google.com,Assignment due tomorrow,You have an assignment due tomorrow in your class. Please complete and submit it on time.,0
+noreply@coursera.org,Course progress update,You have completed 60 percent of your course. Keep going to earn your certificate.,0
+notifications@udemy.com,Your course is waiting,You enrolled in a course last week. Continue learning to finish it this month.,0
+admin@university.edu,Semester registration open,Registration for the upcoming semester is now open. Please log in to the student portal to register.,0
+registrar@college.edu,Grade report available,Your final grades for the current semester are now available on the student portal.,0
+library@university.edu,Book due date reminder,The book you borrowed from the library is due in 3 days. Please return or renew it.,0
+events@college.edu,Campus event this Friday,Join us this Friday for the annual cultural fest at the main auditorium at 5pm. Entry is free.,0
+placement@university.edu,Campus placement drive,A campus placement drive is scheduled next week. Register your interest by Friday.,0
+info@charusat.edu.in,Short course registration open,Charotar University is offering summer certificate courses. Registration fee is 1000 per course. Visit the registration link to enroll.,0
+noreply@edx.org,Certificate earned,Congratulations! You have successfully completed the course and earned a verified certificate.,0
+no-reply@khanacademy.org,Weekly progress report,Here is your weekly learning summary. You practiced math for 3 hours this week. Keep it up.,0
+billing@aws.amazon.com,Your AWS bill is ready,Your AWS bill for this month is ready. You can view and download it from the billing console.,0
+no-reply@github.com,Your repository was starred,Someone starred your repository on GitHub. Check it out.,0
+noreply@stackoverflow.com,New answer on your question,Someone answered your question on Stack Overflow. View the answer to see if it helps.,0
+info@eventbrite.com,Your ticket is confirmed,Your ticket for the upcoming tech conference is confirmed. See you there!,0
+newsletter@nationalgeographic.com,This week in science,Discover the latest science and nature stories in this week's National Geographic newsletter.,0
+digest@producthunt.com,Top products of the day,Here are the most upvoted products on Product Hunt today. Check them out.,0
+no-reply@duolingo.com,Daily streak reminder,You are on a 7 day learning streak. Practice today to keep it going!,0
+updates@notion.so,Your workspace has new activity,A teammate made changes to a shared page in your Notion workspace.,0
+hello@substack.com,New post from a writer you follow,A writer you follow just published a new post. Read it in your inbox.,0
+no-reply@figma.com,Someone commented on your design,A collaborator left a comment on your Figma file. Click to view the feedback.,0
+accounts@google.com,Security alert for your Google account,A new device signed into your Google account. If this was you no action is needed.,0
+mailer@amazon.com,Your order has shipped,Your recent Amazon order has shipped and will arrive in 2 to 3 days. Track your package.,0
+no-reply@apple.com,Your receipt from Apple,Thank you for your purchase from the App Store. Here is your receipt for this transaction.,0
+donotreply@paypal.com,You sent a payment,You sent a payment of 25 dollars to a friend. If you did not authorize this contact support.,0
+info@coursefee-secure-pay.tk,Course fee payment required,Your course fee payment is overdue. Pay now or risk losing your seat. Click the secure link immediately.,1
+register@college-update-verify.ml,Urgent: Student portal verification,Your student account has been suspended. Click here to verify and restore access immediately.,1
+admin@university-payment-portal.xyz,Fee payment deadline extended,Your fee payment deadline has been extended. However you must verify your account details now.,1
+scholarship@free-grant-claim.net,You qualify for a scholarship grant,Congratulations you have been selected for a scholarship of 50000. Claim now by providing your bank details.,1
+results@exam-portal-verify.info,Your exam results are ready,Your results are out. Click here to verify your identity and unlock your marksheet immediately.,1
+support@student-id-locked.com,Student ID locked,Your student ID has been locked due to suspicious activity. Provide your credentials to restore it.,1
+fee@college-refund-claim.net,Fee refund approved,Your college fee refund of 15000 has been approved. Provide your bank account number to receive it.,1
+noreply@certificate-verify.xyz,Certificate verification required,Your degree certificate requires re-verification. Click the link and submit your documents immediately.,1
+placement@job-offer-confirm.net,Job offer confirmation required,You have received a job offer. Confirm your personal details and bank account to proceed.,1
+hr@company-bonus-credit.ml,Salary bonus credited,A bonus of 10000 has been credited to your account. Verify your bank details to receive it now.,1
+admin@school-portal-update.info,School portal update required,Your school portal account requires immediate update. Click here or access will be restricted.,1
+teacher@classroom-notify.net,Assignment grade update,Your recent assignment has been graded. Click here to view your grade and update your profile.,1
+info@free-course-certificate.click,Free certificate course available,Enroll now in our free certified course. Limited seats. Register today and pay a small processing fee.,1
+enrollment@summer-program-verify.ml,Summer program enrollment,You have been selected for a summer program. Pay the registration fee of 500 to confirm your seat.,1
+no-reply@alumni-fund-claim.net,Alumni fund disbursement,As an alumnus you qualify for a fund of 25000. Provide your details to receive the amount.,1
+professor@grade-update-portal.xyz,Grade correction required,There was an error in your grade. Click here to verify your identity and submit a correction request.,1
+admin@paypal.com,Your account is limited,We have noticed unusual activity on your PayPal account and temporarily limited it. Please resolve.,1
+service@amazon.com,Action required on your account,We need to verify your Amazon account information. Please update your payment method now.,1
+security@google-account-alert.com,Google account sign in blocked,We blocked a suspicious sign in attempt to your Google account. Verify your identity now.,1
+team@microsoft-verify.net,Microsoft account verification,Your Microsoft account needs to be verified. Click the link to secure your account now.,1
+helpdesk@banklogin-secure.info,Bank account access suspended,Your bank account access has been temporarily suspended. Verify your details immediately to restore.,1
+prize@lottery-winner-2025.com,You are a winner,You have been selected in our international lottery. Claim your prize of one million dollars today.,1
+offer@limited-time-deal.xyz,Exclusive deal just for you,You have been specially selected for an exclusive limited time deal. Click now before it expires.,1
+verify@account-confirm-secure.net,Confirm your account now,Your account will be deactivated in 24 hours unless you confirm your details. Click to verify now.,1
+noreply@dropbox.com,Someone shared a folder with you,A colleague shared a folder with you on Dropbox. Click to view the contents.,0
+hello@trello.com,You have been added to a board,You have been added to a new project board on Trello. Start collaborating now.,0
+news@medium.com,Stories we think you will like,Based on your reading history here are some stories curated for you this week.,0
+updates@atlassian.com,Confluence page updated,A page you follow in Confluence has been updated. Review the latest changes.,0
+no-reply@hubspot.com,Your report is ready,Your monthly analytics report has been generated and is ready to view in HubSpot.,0
+billing@digitalocean.com,Invoice for this month,Your DigitalOcean invoice for this month has been generated. View it in your billing portal.,0
+hello@airbnb.com,Booking confirmed,Your Airbnb booking has been confirmed. Check in details and directions are in the attachment.,0
+service@booking.com,Your reservation is confirmed,Thank you for booking with us. Your hotel reservation confirmation number is included in this email.,0
+support@zendesk.com,Your ticket has been resolved,Your support ticket has been marked as resolved. Let us know if you need further assistance.,0
+info@meetup.com,New event in your area,A new meetup event has been created near you. Join fellow enthusiasts for a great discussion.,0
+weekly@glassdoor.com,Jobs matching your profile,Here are this week's job recommendations based on your Glassdoor profile and preferences.,0
+alerts@indeed.com,New jobs matching your search,5 new jobs match your saved search. Apply today while positions are still open.,0
+do-not-reply@naukri.com,Recruiter viewed your profile,A recruiter from a top company viewed your Naukri profile today. Update your resume to stand out.,0
+digest@hackernews.com,Top stories on Hacker News,Here are the most discussed stories on Hacker News from the past 24 hours.,0
+hello@grammarly.com,Your weekly writing stats,You wrote 1200 words this week. Here are your writing highlights and suggestions for improvement.,0
+noreply@canva.com,Your design has been shared,Someone shared a Canva design with you for collaboration. Click to open and edit it.,0
+updates@wordpress.com,New comment on your post,A reader left a comment on your blog post. Moderate it in your WordPress dashboard.,0
+no-reply@lms.university.edu,Lecture uploaded for today,Your professor has uploaded today's lecture notes and slides to the learning portal.,0
+info@workshop-registration.org,Workshop registration confirmed,Your registration for the communication skills workshop has been confirmed. See you there.,0
+coordinator@seminar.edu,Seminar reminder tomorrow,This is a reminder that the seminar on career development starts tomorrow at 10am in Hall 3.,0
+admin@charusat.ac.in,Exam schedule released,The examination schedule for the upcoming semester has been released. Check the student portal.,0
+hr@charusat.ac.in,Holiday list for 2025,Please find attached the official holiday calendar for the year 2025 from the HR department.,0
+noreply@forms.google.com,Form response submitted,Your form response has been successfully submitted. Thank you for filling out the form.,0
+no-reply@classroom.google.com,New material added to class,Your teacher added new study material to your Google Classroom course. Log in to access it.,0
+info@skillindia.gov.in,Free skill development course,Skill India is offering a free online certification course. Register using the official government portal.,0
+alerts@nptel.ac.in,NPTEL course enrollment open,Enrollment for the new semester of NPTEL online courses is now open. Register before the deadline.,0
+newsletter@iim.ac.in,IIM executive program details,The Indian Institute of Management is inviting applications for its executive MBA program this year.,0
+no-reply@swayam.gov.in,New course available on SWAYAM,A new government certified course has been added to the SWAYAM platform. Enroll for free today.,0
+placement@iit.ac.in,Placement season begins,The campus placement season starts next month. Eligible students should register on the placement portal.,0
+notify@razorpay.com,Payment received successfully,A payment of 999 rupees has been successfully received in your Razorpay account from a customer.,0
+billing@paytm.com,Transaction successful,Your Paytm transaction of 500 rupees was successful. Check your wallet for updated balance.,0

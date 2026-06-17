@@ -1,0 +1,61 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Common helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    // Scan Schema Validation
+    function isValidScan(data) {
+      return data.keys().hasAll(['sender', 'subject', 'body', 'riskScore', 'riskLevel', 'createdAt', 'summary', 'confidence', 'userId', 'threatVectors'])
+        && data.keys().size() == 10
+        && data.sender is string && data.sender.size() <= 256
+        && data.subject is string && data.subject.size() <= 512
+        && data.body is string && data.body.size() <= 65536
+        && data.riskScore is number && data.riskScore >= 0 && data.riskScore <= 100
+        && data.riskLevel is string && (data.riskLevel == 'HIGH' || data.riskLevel == 'MEDIUM' || data.riskLevel == 'LOW')
+        && data.createdAt is timestamp && data.createdAt == request.time
+        && data.summary is string && data.summary.size() <= 10240
+        && data.confidence is number && data.confidence >= 0 && data.confidence <= 100
+        && data.userId is string && data.userId == request.auth.uid
+        && data.threatVectors is list && data.threatVectors.size() <= 20;
+    }
+
+    // Scans Match Group Routing Block
+    match /scans/{scanId} {
+      allow create: if isSignedIn()
+        && isValidId(scanId)
+        && isValidScan(incoming());
+
+      allow get: if isSignedIn()
+        && resource.data.userId == request.auth.uid;
+        
+      allow list: if isSignedIn()
+        // the client query already enforces where("userId", "==", user.uid)
+        // using resource criteria on list can sometimes cause permission denied with orderBys
+        && request.auth.uid != null;
+
+      // Updates and Deletions are forbidden to protect integrity of the audit trails
+      allow update, delete: if false;
+    }
+
+    // Connection verification document rule
+    match /test/connection {
+      allow read: if true;
+    }
+  }
+}

@@ -1,0 +1,134 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-background: var(--bg);
+  --color-surface-dim: var(--surface-dim);
+  --color-surface-bright: var(--surface-bright);
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline-variant);
+  
+  --color-primary-fixed-dim: #818cf8;
+  --color-primary-fixed: #a5b4fc;
+  --color-primary-container: #4f46e5;
+  --color-on-primary-container: #ffffff;
+  --color-secondary-container: #3b0764;
+  --color-secondary: #c084fc;
+  --color-error: #f87171;
+  --color-error-container: #7f1d1d;
+  
+  --font-sans: "Plus Jakarta Sans", "Inter", ui-sans-serif, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+:root {
+  --bg: #09090b;
+  --surface-dim: #171717;
+  --surface-bright: #262626;
+  --surface-container-lowest: #0a0a0a;
+  --surface-container-low: #171717;
+  --surface-container: #1e1e1e;
+  --surface-container-high: #262626;
+  --surface-container-highest: #323232;
+  --on-surface: #f5f5f5;
+  --on-surface-variant: #a3a3a3;
+  --outline: #737373;
+  --outline-variant: #262626;
+}
+
+:root[data-theme="light"] {
+  --bg: #fafafa;
+  --surface-dim: #f5f5f5;
+  --surface-bright: #ffffff;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f5f5f5;
+  --surface-container: #e5e5e5;
+  --surface-container-high: #d4d4d4;
+  --surface-container-highest: #a3a3a3;
+  --on-surface: #171717;
+  --on-surface-variant: #525252;
+  --outline: #737373;
+  --outline-variant: #d4d4d4;
+}
+
+@layer utilities {
+  .bento-grid-container {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .bento-card {
+    background-color: var(--surface-container-low);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--outline-variant);
+    border-radius: 1.5rem; /* rounded-3xl */
+    padding: 1.5rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
+  }
+
+  .bento-card:hover {
+    border-color: rgba(99, 102, 241, 0.5);
+    background-color: var(--surface-container);
+    box-shadow: 0 10px 30px -4px rgba(0, 0, 0, 0.3);
+  }
+
+  .bento-card-indigo {
+    background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+    border-radius: 1.5rem; /* rounded-3xl */
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+    color: #ffffff;
+    box-shadow: 0 8px 30px -4px rgba(79, 70, 229, 0.3);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .bento-card-indigo:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px -4px rgba(79, 70, 229, 0.45), 0 0 25px 2px rgba(99, 102, 241, 0.1);
+  }
+
+  /* Keep legacy glass panel supporting classes */
+  .glass-panel {
+    background: rgba(23, 23, 23, 0.45);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    border-bottom-color: rgba(99, 102, 241, 0.15);
+    border-right-color: rgba(99, 102, 241, 0.15);
+  }
+  
+  .glass-panel-active {
+    border: 1px solid transparent;
+    background-image: linear-gradient(#171717, #171717), linear-gradient(to right, #818cf8, #4f46e5);
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
+  }
+
+  /* Custom high-tech scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #09090b;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #262626;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #4f46e5;
+  }
+}
