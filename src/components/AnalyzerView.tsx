@@ -3,13 +3,15 @@ import { Mail, SearchCode, ShieldAlert, Cpu, AlertTriangle, Play, HelpCircle, Fi
 import { Scan } from "../types";
 import { motion, AnimatePresence } from "motion/react";
 import MLFeedbackPanel from "./MLFeedbackPanel";
+import FeedbackPanel from "./FeedbackPanel";
 
 interface AnalyzerViewProps {
   onScanComplete: (newScan: Scan) => void;
   onRequestOpenSettings?: () => void;
+  userId?: string;
 }
 
-export default function AnalyzerView({ onScanComplete, onRequestOpenSettings }: AnalyzerViewProps) {
+export default function AnalyzerView({ onScanComplete, onRequestOpenSettings, userId }: AnalyzerViewProps) {
   const [inputMode, setInputMode] = useState<"fields" | "raw">("fields");
   const [analysisEngine, setAnalysisEngine] = useState<"ai" | "ml">("ai");
   const [sender, setSender] = useState("");
@@ -776,6 +778,11 @@ export default function AnalyzerView({ onScanComplete, onRequestOpenSettings }: 
               {/* ML Active Learning Feedback — only shown for ML engine results */}
               {results && analysisEngine === "ml" && (
                 <MLFeedbackPanel scan={results} />
+              )}
+
+              {/* Universal Feedback Panel — shown for ALL engine results when user is logged in */}
+              {results && userId && (
+                <FeedbackPanel scan={results} userId={userId} />
               )}
 
             </motion.div>

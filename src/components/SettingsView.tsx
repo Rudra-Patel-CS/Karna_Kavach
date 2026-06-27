@@ -1,8 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Shield, Key, Sparkles, User, Database, Check, AlertTriangle, Moon, Sun, Monitor, Save, RefreshCw, Cpu, Eye, EyeOff, LayoutTemplate, FileJson, FileText, Bell, BellOff, Globe, Brain, Download, BarChart3, RotateCcw, Zap, ChevronDown, ChevronUp } from "lucide-react";
+import { Shield, Key, Sparkles, User, Database, Check, AlertTriangle, Moon, Sun, Monitor, Save, RefreshCw, Cpu, Eye, EyeOff, LayoutTemplate, FileJson, FileText, Bell, BellOff, Globe, Brain, Download, BarChart3, RotateCcw, Zap, ChevronDown, ChevronUp, Cloud, HardDrive } from "lucide-react";
 import { isDummy } from "../firebase";
 import { MLStatus } from "../types";
 import { motion, AnimatePresence } from "motion/react";
+import {
+  loadSettings,
+  saveSettings,
+  listenSettings,
+  DEFAULT_SETTINGS,
+  type AppSettings,
+} from "../services/userSettings";
+import MLCenter from "./MLCenter";
 
 interface SettingsViewProps {
   user: any;
@@ -10,17 +18,18 @@ interface SettingsViewProps {
 }
 
 export default function SettingsView({ user, hasApiKey }: SettingsViewProps) {
-  const [theme, setTheme] = useState("dark");
-  const [model, setModel] = useState("gemini-2.5-flash");
-  const [sensitivity, setSensitivity] = useState("Medium");
-  const [saveHistory, setSaveHistory] = useState(true);
-  const [autoUrlScan, setAutoUrlScan] = useState(true);
-  const [enableOcr, setEnableOcr] = useState(true);
-  const [notifications, setNotifications] = useState(true);
-  const [exportFormat, setExportFormat] = useState("JSON");
-  const [language, setLanguage] = useState("English");
-  
-  const [saveIndicator, setSaveIndicator] = useState(false);
+  const [theme, setTheme] = useState(DEFAULT_SETTINGS.theme);
+  const [model, setModel] = useState(DEFAULT_SETTINGS.model);
+  const [sensitivity, setSensitivity] = useState(DEFAULT_SETTINGS.sensitivity);
+  const [saveHistory, setSaveHistory] = useState(DEFAULT_SETTINGS.saveHistory);
+  const [autoUrlScan, setAutoUrlScan] = useState(DEFAULT_SETTINGS.autoUrlScan);
+  const [enableOcr, setEnableOcr] = useState(DEFAULT_SETTINGS.enableOcr);
+  const [notifications, setNotifications] = useState(DEFAULT_SETTINGS.notifications);
+  const [exportFormat, setExportFormat] = useState(DEFAULT_SETTINGS.exportFormat);
+  const [language, setLanguage] = useState(DEFAULT_SETTINGS.language);
+
+  const [saveIndicator, setSaveIndicator] = useState<"idle" | "saving" | "saved" | "offline">("idle");
+  const [settingsSource, setSettingsSource] = useState<"firestore" | "local">("local");
 
   // ── ML Management State ──────────────────────────────────────────
   const [mlStatus, setMlStatus] = useState<MLStatus | null>(null);
@@ -108,46 +117,68 @@ export default function SettingsView({ user, hasApiKey }: SettingsViewProps) {
   };
   // ── ML Management State END ──────────────────────────────────────
 
-  // Load from local storage on mount
+  // ── Load settings on mount + real-time listener ─────────────────────────
   useEffect(() => {
-    const saved = localStorage.getItem("karnakavach_settings");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setTheme(parsed.theme || "dark");
-        setModel(parsed.model || "gemini-2.5-flash");
-        setSensitivity(parsed.sensitivity || "Medium");
-        setSaveHistory(parsed.saveHistory ?? true);
-        setAutoUrlScan(parsed.autoUrlScan ?? true);
-        setEnableOcr(parsed.enableOcr ?? true);
-        setNotifications(parsed.notifications ?? true);
-        setExportFormat(parsed.exportFormat || "JSON");
-        setLanguage(parsed.language || "English");
-      } catch (e) {
-        console.error("Failed to parse settings", e);
+    if (!user?.uid) return;
+
+    // Initial load from Firestore (falls back to localStorage)
+    loadSettings(user.uid).then((s: AppSettings) => {
+      applySettingsToState(s);
+      setSettingsSource(isDummy || !user?.uid ? "local" : "firestore");
+    });
+
+    // Real-time listener — syncs settings from another device/tab
+    const unsub = listenSettings(user.uid, (s: AppSettings) => {
+      applySettingsToState(s);
+      setSettingsSource("firestore");
+    });
+    return () => unsub();
+  }, [user?.uid]);
+
+  function applySettingsToState(s: AppSettings) {
+    setTheme(s.theme);
+    setModel(s.model);
+    setSensitivity(s.sensitivity);
+    setSaveHistory(s.saveHistory);
+    setAutoUrlScan(s.autoUrlScan);
+    setEnableOcr(s.enableOcr);
+    setNotifications(s.notifications);
+    setExportFormat(s.exportFormat);
+    setLanguage(s.language);
+    // Apply theme immediately
+    applyTheme(s.theme);
+  }
+
+  function applyTheme(t: string) {
+    if (t === "light") {
+      document.documentElement.setAttribute("data-theme", "light");
+    } else if (t === "dark") {
+      document.documentElement.removeAttribute("data-theme");
+    } else {
+      if (window.matchMedia?.("(prefers-color-scheme: light)").matches) {
+        document.documentElement.setAttribute("data-theme", "light");
+      } else {
+        document.documentElement.removeAttribute("data-theme");
       }
     }
-  }, []);
+  }
 
-  const handleSaveSettings = () => {
-    const settings = { theme, model, sensitivity, saveHistory, autoUrlScan, enableOcr, notifications, exportFormat, language };
-    localStorage.setItem("karnakavach_settings", JSON.stringify(settings));
+  const handleSaveSettings = async () => {
+    const settings: AppSettings = {
+      theme, model, sensitivity, saveHistory,
+      autoUrlScan, enableOcr, notifications, exportFormat, language,
+    };
+    setSaveIndicator("saving");
+    applyTheme(theme);
     window.dispatchEvent(new Event("karnakavach_settings_updated"));
-    setSaveIndicator(true);
-    setTimeout(() => setSaveIndicator(false), 2000);
+    await saveSettings(user?.uid || "", settings);
+    setSaveIndicator(isDummy || !user?.uid ? "offline" : "saved");
+    setTimeout(() => setSaveIndicator("idle"), 2500);
   };
 
-  const handleResetDefaults = () => {
-    setTheme("dark");
-    setModel("gemini-1.5-pro");
-    setSensitivity("Medium");
-    setSaveHistory(true);
-    setAutoUrlScan(true);
-    setEnableOcr(true);
-    setNotifications(true);
-    setExportFormat("JSON");
-    setLanguage("English");
-    localStorage.removeItem("karnakavach_settings");
+  const handleResetDefaults = async () => {
+    applySettingsToState(DEFAULT_SETTINGS);
+    await saveSettings(user?.uid || "", DEFAULT_SETTINGS);
     window.dispatchEvent(new Event("karnakavach_settings_updated"));
   };
 
@@ -171,11 +202,27 @@ export default function SettingsView({ user, hasApiKey }: SettingsViewProps) {
           </button>
           <button 
             onClick={handleSaveSettings}
-            className="flex items-center gap-2 px-4 py-2 text-[10px] uppercase font-bold tracking-wider text-background transition-colors rounded-lg bg-[#00dbe9] hover:bg-[#00c5d2]"
+            disabled={saveIndicator === "saving"}
+            className="flex items-center gap-2 px-4 py-2 text-[10px] uppercase font-bold tracking-wider text-background transition-colors rounded-lg bg-[#00dbe9] hover:bg-[#00c5d2] disabled:opacity-60"
           >
-            {saveIndicator ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-            {saveIndicator ? "Saved" : "Apply Configuration"}
+            {saveIndicator === "saving" ? (
+              <><span className="w-3.5 h-3.5 border-2 border-background border-t-transparent rounded-full animate-spin" /> Saving...</>
+            ) : saveIndicator === "saved" ? (
+              <><Check className="w-4 h-4" /> Saved to Cloud</>
+            ) : saveIndicator === "offline" ? (
+              <><HardDrive className="w-4 h-4" /> Saved Locally</>
+            ) : (
+              <><Save className="w-4 h-4" /> Apply Configuration</>
+            )}
           </button>
+        </div>
+        {/* Settings source badge */}
+        <div className="flex items-center gap-1.5 mt-1">
+          {settingsSource === "firestore" ? (
+            <><Cloud className="w-3 h-3 text-primary-fixed-dim" /><span className="text-[10px] text-primary-fixed-dim font-mono">Synced with Firestore</span></>
+          ) : (
+            <><HardDrive className="w-3 h-3 text-outline-variant" /><span className="text-[10px] text-outline-variant font-mono">Local storage</span></>
+          )}
         </div>
       </div>
 
@@ -412,7 +459,16 @@ export default function SettingsView({ user, hasApiKey }: SettingsViewProps) {
 
       </div>
 
-      {/* ── ML MANAGEMENT SECTION ──────────────────────────────────────── */}
+      {/* ── ML CENTER ──────────────────────────────────────────────────── */}
+      {user?.uid && (
+        <div className="mt-2">
+          <MLCenter userId={user.uid} />
+        </div>
+      )}
+
+    </div>
+  );
+}
       <div className="mt-2">
         <div className="flex items-center gap-3 mb-6">
           <Brain className="w-5 h-5 text-indigo-400" />

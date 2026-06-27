@@ -8,7 +8,7 @@ import HistoryView from "./components/HistoryView";
 import IntelligenceView from "./components/IntelligenceView";
 import SettingsView from "./components/SettingsView";
 import { Scan } from "./types";
-import { Shield, ShieldCheck, ShieldAlert, Cpu, X, Menu } from "lucide-react";
+import { Shield, Menu } from "lucide-react";
 import { 
   auth, 
   isDummy, 
@@ -17,6 +17,7 @@ import {
   saveScanToFirestore, 
   listenUserScansFromFirestore 
 } from "./firebase";
+import { createOrUpdateUserProfile } from "./services/userProfile";
 import { onAuthStateChanged } from "firebase/auth";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -68,6 +69,8 @@ export default function App() {
             emailVerified: firebaseUser.emailVerified
           });
           setTargetState("app");
+          // Ensure user profile exists and lastLoginAt is current on session restore
+          createOrUpdateUserProfile(firebaseUser);
         } else {
           setTargetState("auth");
         }
@@ -166,7 +169,12 @@ export default function App() {
   };
 
   const handleNewScanResult = async (newScan: Scan) => {
-    if (!user) return;
+    console.log("[KarnaKavach] handleNewScanResult called. Scan:", newScan?.id, "| User:", user?.uid, "| isDummy:", isDummy);
+
+    if (!user) {
+      console.warn("[KarnaKavach] No authenticated user — scan not saved.");
+      return;
+    }
 
     // Check if user disabled saving history
     const saved = localStorage.getItem("karnakavach_settings");
@@ -203,12 +211,12 @@ export default function App() {
       localStorage.setItem(`karnakavach_scans_${user.uid}`, JSON.stringify(updated));
       localStorage.setItem("karnakavach_scans", JSON.stringify(updated));
     } else {
-      // Save to Firestore — the onSnapshot listener will sync back,
-      // but local state is already updated above so the UI is instant
+      console.log("[KarnaKavach] Attempting Firestore save for scan:", newScan.id, "user:", user.uid);
       try {
         await saveScanToFirestore(user.uid, newScan);
+        console.log("[KarnaKavach] Firestore save completed for scan:", newScan.id);
       } catch (error) {
-        console.error("Failed to commit assessment payload to Firestore:", error);
+        console.error("[KarnaKavach] Firestore save failed, falling back to localStorage:", error);
         // Keep in local state even if Firestore write failed — persist to localStorage as fallback
         const fallback = [newScan, ...scans];
         localStorage.setItem(`karnakavach_scans_${user.uid}`, JSON.stringify(fallback));
@@ -370,12 +378,14 @@ export default function App() {
                           setCurrentTab("intelligence");
                         }}
                         onInitiateScanMail={() => setCurrentTab("analyzer")}
+                        userId={user?.uid}
                       />
                     )}
                     {currentTab === "analyzer" && (
                       <AnalyzerView 
                         onScanComplete={handleNewScanResult} 
                         onRequestOpenSettings={() => setCurrentTab("settings")}
+                        userId={user?.uid}
                       />
                     )}
                     {currentTab === "history" && (

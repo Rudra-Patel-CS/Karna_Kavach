@@ -1,61 +1,87 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 1. Global Safety Net
-    match /{document=**} {
-      allow read, write: if false;
-    }
 
-    // Common helper functions
+    // ── Helper functions ──────────────────────────────────────────────────
     function isSignedIn() {
       return request.auth != null;
     }
-
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    function isOwner(uid) {
+      return request.auth.uid == uid;
     }
 
-    function incoming() {
-      return request.resource.data;
+    // ── users/{uid} ───────────────────────────────────────────────────────
+    match /users/{uid} {
+      allow read:   if isSignedIn() && isOwner(uid);
+      allow create: if isSignedIn() && isOwner(uid);
+      allow update: if isSignedIn() && isOwner(uid);
+      allow delete: if false;
     }
 
-    // Scan Schema Validation
-    function isValidScan(data) {
-      return data.keys().hasAll(['sender', 'subject', 'body', 'riskScore', 'riskLevel', 'createdAt', 'summary', 'confidence', 'userId', 'threatVectors'])
-        && data.keys().size() == 10
-        && data.sender is string && data.sender.size() <= 256
-        && data.subject is string && data.subject.size() <= 512
-        && data.body is string && data.body.size() <= 65536
-        && data.riskScore is number && data.riskScore >= 0 && data.riskScore <= 100
-        && data.riskLevel is string && (data.riskLevel == 'HIGH' || data.riskLevel == 'MEDIUM' || data.riskLevel == 'LOW')
-        && data.createdAt is timestamp && data.createdAt == request.time
-        && data.summary is string && data.summary.size() <= 10240
-        && data.confidence is number && data.confidence >= 0 && data.confidence <= 100
-        && data.userId is string && data.userId == request.auth.uid
-        && data.threatVectors is list && data.threatVectors.size() <= 20;
+    // ── settings/{uid} ────────────────────────────────────────────────────
+    match /settings/{uid} {
+      allow read:   if isSignedIn() && isOwner(uid);
+      allow write:  if isSignedIn() && isOwner(uid);
     }
 
-    // Scans Match Group Routing Block
-    match /scans/{scanId} {
+    // ── ml_models/{docId} ────────────────────────────────────────────────────
+    // Model version registry — readable by all authenticated users, writable by server-side only
+    match /ml_models/{docId} {
+      allow read:   if isSignedIn();
+      allow create: if isSignedIn();   // client creates after retraining
+      allow update: if isSignedIn();   // for marking active/inactive
+      allow delete: if false;
+    }
+
+    // ── feedback/{feedbackId} ─────────────────────────────────────────────
+    match /feedback/{feedbackId} {
+      // Any signed-in user can create feedback for their own scans
       allow create: if isSignedIn()
-        && isValidId(scanId)
-        && isValidScan(incoming());
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.predictedLabel in ['Phishing', 'Legitimate', 'Suspicious']
+        && request.resource.data.correctLabel   in ['Phishing', 'Legitimate', 'Suspicious']
+        && request.resource.data.confidence     is number
+        && request.resource.data.scanId         is string
+        && request.resource.data.sender         is string
+        && request.resource.data.subject        is string;
 
-      allow get: if isSignedIn()
+      // Users can only read their own feedback
+      allow read: if isSignedIn()
         && resource.data.userId == request.auth.uid;
-        
-      allow list: if isSignedIn()
-        // the client query already enforces where("userId", "==", user.uid)
-        // using resource criteria on list can sometimes cause permission denied with orderBys
-        && request.auth.uid != null;
 
-      // Updates and Deletions are forbidden to protect integrity of the audit trails
+      // Feedback is immutable once submitted
       allow update, delete: if false;
     }
 
-    // Connection verification document rule
+    // ── scans/{scanId} ────────────────────────────────────────────────────
+    match /scans/{scanId} {
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.riskScore  is number
+        && request.resource.data.riskScore  >= 0
+        && request.resource.data.riskScore  <= 100
+        && request.resource.data.riskLevel  in ['HIGH', 'MEDIUM', 'LOW']
+        && request.resource.data.sender     is string
+        && request.resource.data.subject    is string
+        && request.resource.data.body       is string
+        && request.resource.data.summary    is string
+        && request.resource.data.confidence is number;
+
+      allow read: if isSignedIn()
+        && resource.data.userId == request.auth.uid;
+
+      // Scans are immutable audit records
+      allow update, delete: if false;
+    }
+
+    // ── test/connection ───────────────────────────────────────────────────
     match /test/connection {
       allow read: if true;
+    }
+
+    // ── Global deny-all fallback ──────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Shield, 
   TrendingUp, 
@@ -15,9 +15,13 @@ import {
   HelpCircle,
   Link2,
   X,
-  SearchCode
+  SearchCode,
+  MessageSquare,
+  ThumbsUp,
+  ThumbsDown,
+  Target
 } from "lucide-react";
-import { Scan, DashboardStats } from "../types";
+import { Scan, DashboardStats, FeedbackStats } from "../types";
 import { 
   BarChart, 
   Bar, 
@@ -30,20 +34,29 @@ import {
   Cell 
 } from "recharts";
 import { motion, AnimatePresence } from "motion/react";
+import { getFeedbackStats } from "../services/feedbackService";
 
 interface DashboardViewProps {
   scans: Scan[];
   onSelectScan: (scan: Scan) => void;
   onInitiateScanMail: () => void;
+  userId?: string;
 }
 
-export default function DashboardView({ scans, onSelectScan, onInitiateScanMail }: DashboardViewProps) {
+export default function DashboardView({ scans, onSelectScan, onInitiateScanMail, userId }: DashboardViewProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [showUrlModal, setShowUrlModal] = useState(false);
   const [urlInput, setUrlInput] = useState("");
   const [urlAnalyzing, setUrlAnalyzing] = useState(false);
   const [urlResult, setUrlResult] = useState<any>(null);
   const [urlError, setUrlError] = useState("");
+  const [feedbackStats, setFeedbackStats] = useState<FeedbackStats | null>(null);
+
+  // Load feedback stats when userId is available
+  useEffect(() => {
+    if (!userId) return;
+    getFeedbackStats(userId).then(setFeedbackStats);
+  }, [userId]);
 
   const handleAnalyzeUrl = async () => {
     if (!urlInput.trim()) return;
@@ -275,9 +288,67 @@ export default function DashboardView({ scans, onSelectScan, onInitiateScanMail 
           </p>
         </div>
 
+        {/* Card 4b: Feedback Intelligence Stats */}
+        {feedbackStats && feedbackStats.total > 0 && (
+          <div id="bento-feedback" className="col-span-12 md:col-span-4 bento-card flex flex-col justify-between min-h-[200px]">
+            <div>
+              <h3 className="text-[10px] font-bold uppercase text-on-surface-variant tracking-widest mb-4 flex items-center gap-2">
+                <MessageSquare className="w-3.5 h-3.5 text-primary-fixed-dim" />
+                Feedback Intelligence
+              </h3>
+              <div className="space-y-4">
+                <div className="relative">
+                  <div className="flex justify-between text-[10px] mb-1.5 font-mono">
+                    <span className="text-on-surface-variant flex items-center gap-1">
+                      <ThumbsUp className="w-3 h-3 text-emerald-400" /> Correct Predictions
+                    </span>
+                    <span className="text-emerald-400 font-bold">{feedbackStats.correct}</span>
+                  </div>
+                  <div className="w-full h-1 bg-surface-container rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-500 transition-all duration-700"
+                      style={{ width: feedbackStats.total > 0 ? `${(feedbackStats.correct / feedbackStats.total) * 100}%` : "0%" }}
+                    />
+                  </div>
+                </div>
+                <div className="relative">
+                  <div className="flex justify-between text-[10px] mb-1.5 font-mono">
+                    <span className="text-on-surface-variant flex items-center gap-1">
+                      <ThumbsDown className="w-3 h-3 text-rose-400" /> Incorrect Predictions
+                    </span>
+                    <span className="text-rose-400 font-bold">{feedbackStats.incorrect}</span>
+                  </div>
+                  <div className="w-full h-1 bg-surface-container rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-rose-500 transition-all duration-700"
+                      style={{ width: feedbackStats.total > 0 ? `${(feedbackStats.incorrect / feedbackStats.total) * 100}%` : "0%" }}
+                    />
+                  </div>
+                </div>
+                <div className="relative">
+                  <div className="flex justify-between text-[10px] mb-1.5 font-mono">
+                    <span className="text-on-surface-variant flex items-center gap-1">
+                      <Target className="w-3 h-3 text-primary-fixed-dim" /> Estimated Accuracy
+                    </span>
+                    <span className="text-primary-fixed-dim font-bold">{feedbackStats.estimatedAccuracy}%</span>
+                  </div>
+                  <div className="w-full h-1 bg-surface-container rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-primary-fixed-dim transition-all duration-700"
+                      style={{ width: `${feedbackStats.estimatedAccuracy}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p className="text-[9px] text-on-surface-variant leading-relaxed pt-2 border-t border-outline-variant/30 mt-4 font-mono">
+              Based on {feedbackStats.total} verified feedback {feedbackStats.total === 1 ? "entry" : "entries"}.
+            </p>
+          </div>
+        )}
+
         {/* Card 5: Engine Connection Sync (col-span-5, Syncer block) */}
-        <div id="bento-sync" className="col-span-12 md:col-span-5 bento-card flex items-center justify-between min-h-[100px]">
-          <div className="flex items-center gap-3.5 min-w-0">
+        <div id="bento-sync" className="col-span-12 md:col-span-5 bento-card flex items-center justify-between min-h-[100px]">          <div className="flex items-center gap-3.5 min-w-0">
             <div className="w-11 h-11 bg-surface-container-low rounded-xl flex items-center justify-center text-xl border border-outline-variant">
               ☁️
             </div>

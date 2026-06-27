@@ -1,0 +1,48 @@
+{
+  "current": {
+    "version": 1,
+    "training_date": "2026-06-20T09:06:58.513199Z",
+    "dataset_size": 130,
+    "n_legitimate": 83,
+    "n_phishing": 47,
+    "accuracy": 0.9615,
+    "precision": 1.0,
+    "recall": 0.8889,
+    "f1_score": 0.9412,
+    "roc_auc": 0.9935,
+    "confusion_matrix": [
+      [
+        17,
+        0
+      ],
+      [
+        1,
+        8
+      ]
+    ]
+  },
+  "history": [
+    {
+      "version": 1,
+      "training_date": "2026-06-20T09:06:58.513199Z",
+      "dataset_size": 130,
+      "n_legitimate": 83,
+      "n_phishing": 47,
+      "accuracy": 0.9615,
+      "precision": 1.0,
+      "recall": 0.8889,
+      "f1_score": 0.9412,
+      "roc_auc": 0.9935,
+      "confusion_matrix": [
+        [
+          17,
+          0
+        ],
+        [
+          1,
+          8
+        ]
+      ]
+    }
+  ]
+}

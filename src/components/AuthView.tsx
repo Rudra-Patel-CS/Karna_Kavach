@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useId } from "react";
 import { Shield, Mail, Key, Eye, EyeOff, LogIn, UserPlus, User } from "lucide-react";
-import { loginWithGoogle, loginWithEmail, registerWithEmail } from "../firebase";
+import { loginWithGoogle, loginWithGithub, loginWithEmail, registerWithEmail } from "../firebase";
 import { motion, AnimatePresence } from "motion/react";
 
 interface AuthViewProps {
@@ -96,6 +96,18 @@ export default function AuthView({ onAuthSuccess }: AuthViewProps) {
     setLoading(true);
     setErrorMsg("");
     const { user, error } = await loginWithGoogle();
+    setLoading(false);
+    if (user) {
+      onAuthSuccess(user);
+    } else if (error) {
+      setErrorMsg(error);
+    }
+  };
+
+  const handleGithubSignIn = async () => {
+    setLoading(true);
+    setErrorMsg("");
+    const { user, error } = await loginWithGithub();
     setLoading(false);
     if (user) {
       onAuthSuccess(user);
@@ -360,7 +372,7 @@ export default function AuthView({ onAuthSuccess }: AuthViewProps) {
               </button>
 
               <button
-                onClick={handleGoogleSignIn}
+                onClick={handleGithubSignIn}
                 type="button"
                 disabled={loading}
                 className="flex items-center justify-center gap-2 py-2.5 px-4 border border-outline-variant/30 rounded-lg text-xs text-on-surface hover:bg-surface-bright/20 hover:border-primary-fixed-dim/50 transition-all font-mono cursor-pointer disabled:opacity-50"
