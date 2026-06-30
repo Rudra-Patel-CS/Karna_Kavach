@@ -113,11 +113,9 @@ export async function createOrUpdateUserProfile(
 
     } else {
       // ── RETURNING USER: only update lastLoginAt ──────────────────────────
-      const update: ProfileUpdatePayload = {
+      await updateDoc(userDocRef, {
         lastLoginAt: serverTimestamp(),
-      };
-
-      await updateDoc(userDocRef, update);
+      });
       console.log(`[UserProfile] Last login updated for uid: ${uid}`);
     }
   } catch (error: any) {

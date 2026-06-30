@@ -44,7 +44,8 @@ def analyze_url(url: str) -> Dict[str, Any]:
         
         # 1. Check for IP address instead of domain name
         domain_no_port = domain.split(':')[0]
-        if re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", domain_no_port):
+        is_ip = bool(re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", domain_no_port))
+        if is_ip:
             reasons.append("Uses an IP address instead of a domain name")
             risk_score += 50
             
@@ -69,7 +70,7 @@ def analyze_url(url: str) -> Dict[str, Any]:
         # e.g., login.secure.paypal.com.scam.net
         parts = domain.split('.')
         # Exclude simple IP cases from subdomain logic
-        if len(parts) > 3 and not domain_no_port.replace('.', '').isnumeric():
+        if len(parts) > 3 and not is_ip:
             reasons.append("Contains excessive subdomains")
             risk_score += 30
             
@@ -88,9 +89,37 @@ def analyze_url(url: str) -> Dict[str, Any]:
             reasons.append("Contains very long random or encoded strings (high entropy)")
             risk_score += 20
             
+        # Extracted parameters for URL Intelligence
+        protocol = parsed.scheme or "http"
+        subdomain = ""
+        if len(parts) > 2 and not is_ip:
+            subdomain = ".".join(parts[:-2])
+            
+        port = parsed.port
+        if not port:
+            port = 443 if protocol == "https" else 80
+            
+        parameters = parsed.query or ""
+        
+        has_redirect = False
+        redirect_keywords = ["redirect", "url", "next", "link", "goto", "return", "dest", "destination"]
+        for param in parameters.split('&'):
+            if '=' in param:
+                key = param.split('=')[0].lower()
+                if any(kw in key for kw in redirect_keywords) or param.split('=')[1].startswith("http"):
+                    has_redirect = True
+                    break
+
     except Exception as e:
         reasons.append(f"Malformed URL structure")
         risk_score += 60
+        protocol = "http"
+        domain_no_port = ""
+        subdomain = ""
+        port = 80
+        parameters = ""
+        has_redirect = False
+        is_ip = False
 
     # Cap score at 100
     risk_score = min(risk_score, 100)
@@ -106,5 +135,15 @@ def analyze_url(url: str) -> Dict[str, Any]:
         "url": url,
         "classification": classification,
         "risk_score": risk_score,
-        "reasons": reasons
+        "reasons": reasons,
+        # URL Intelligence fields
+        "protocol": protocol,
+        "domain": domain_no_port,
+        "subdomain": subdomain,
+        "ip": domain_no_port if is_ip else "",
+        "port": port,
+        "redirects": has_redirect,
+        "parameters": parameters,
+        "https": protocol == "https",
+        "risk_level": classification
     }

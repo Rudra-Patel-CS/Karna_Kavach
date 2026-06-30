@@ -70,8 +70,11 @@ service cloud.firestore {
       allow read: if isSignedIn()
         && resource.data.userId == request.auth.uid;
 
+      allow delete: if isSignedIn()
+        && resource.data.userId == request.auth.uid;
+
       // Scans are immutable audit records
-      allow update, delete: if false;
+      allow update: if false;
     }
 
     // ── test/connection ───────────────────────────────────────────────────

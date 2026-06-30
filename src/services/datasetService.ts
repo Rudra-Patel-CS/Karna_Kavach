@@ -8,9 +8,11 @@
 import {
   collection,
   getDocs,
+  query,
+  where,
   Timestamp,
 } from "firebase/firestore";
-import { db, isDummy } from "../firebase";
+import { db, isDummy, auth } from "../firebase";
 import type { FeedbackRecord } from "../types";
 
 // ── Realistic Mock Dataset for Offline/Simulation Mode ────────────────────────
@@ -359,7 +361,16 @@ export async function getDataset(): Promise<FeedbackRecord[]> {
   }
 
   try {
-    const snap = await getDocs(collection(db, "feedback"));
+    // Query only the current user's feedback to comply with Firestore security rules
+    const currentUserId = auth?.currentUser?.uid;
+    if (!currentUserId) {
+      throw new Error("User not authenticated. Please sign in to access the dataset.");
+    }
+    const feedbackQuery = query(
+      collection(db, "feedback"),
+      where("userId", "==", currentUserId)
+    );
+    const snap = await getDocs(feedbackQuery);
     const records: FeedbackRecord[] = [];
 
     snap.forEach((docSnap) => {

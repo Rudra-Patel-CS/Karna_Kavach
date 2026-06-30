@@ -655,4 +655,273 @@ async function startServer() {
   });
 }
 
+// ─── HYBRID ANALYSIS ENDPOINT ───────────────────────────────────────────────
+// Combines Rule Engine (25%) + ML (35%) locally; Gemini adds 40% server-side.
+app.post("/api/hybrid-analyze", async (req, res) => {
+  const { sender, subject, body, model, sensitivity, language, images, replyTo, attachments } = req.body;
+
+  if (!sender && !subject && !body) {
+    return res.status(400).json({ error: "No input provided." });
+  }
+
+  const scriptPath = path.join(process.cwd(), "karnakavach_backend", "hybrid_predict_cli.py");
+  if (!fs.existsSync(scriptPath)) {
+    return res.status(500).json({ error: "Hybrid analysis script not found." });
+  }
+
+  // Step 1: Run Rule Engine + ML locally
+  let hybridLocal: any = null;
+  try {
+    const localResult = await new Promise<string>((resolve, reject) => {
+      const py = spawn(PYTHON_CMD, [scriptPath]);
+      let out = "", err = "";
+      py.stdout.on("data", (d) => { out += d.toString(); });
+      py.stderr.on("data", (d) => { err += d.toString(); });
+      py.on("close", (code) => {
+        if (code === 0) resolve(out);
+        else reject(err || "Hybrid script failed");
+      });
+      py.stdin.write(JSON.stringify({ sender, subject, body, reply_to: replyTo || "", attachments: attachments || [] }));
+      py.stdin.end();
+    });
+    hybridLocal = JSON.parse(localResult);
+  } catch (err: any) {
+    console.warn("[Hybrid] Local analysis failed:", err);
+    hybridLocal = { error: String(err), hybrid_score: 0, rule_score: 0, ml_probability: 0, rule_triggered: [], email_intel: {} };
+  }
+
+  // Step 2: Run Gemini AI analysis
+  const client = getGeminiClient();
+  let aiReport: any = null;
+
+  if (client) {
+    try {
+      const sensitivityMap: Record<string, string> = {
+        Low: "Be conservative. Only flag obvious threats.",
+        High: "Be aggressive. Flag any suspicious indicator.",
+        Medium: "Balanced analysis.",
+      };
+      const sensNote = sensitivityMap[sensitivity] || sensitivityMap.Medium;
+      const langNote = language && language !== "English" ? `\nRespond in ${language}.` : "";
+
+      const prompt = `You are KarnaKavach, an expert phishing email analyst.\n${sensNote}${langNote}\n\nAnalyze this email:\nSENDER: ${sender || "Unknown"}\nSUBJECT: ${subject || "None"}\nBODY:\n${body || "None"}\nREPLY-TO: ${replyTo || "None"}\nATTACHMENTS: ${JSON.stringify(attachments || [])}\n\nThe local Rule Engine detected: ${hybridLocal?.rule_triggered?.map((r: any) => r.rule).join(", ") || "none"}.\nRule score: ${hybridLocal?.rule_score ?? 0}/100. ML score: ${hybridLocal?.ml_probability ?? 0}/100.\nML Verdict was: ${hybridLocal?.ml_verdict || "Unknown"}.\n\nProvide:\n1. riskScore (0-100)\n2. riskLevel (HIGH/MEDIUM/LOW)\n3. summary (detailed explanation of WHY this is or is not phishing, and address the agreement/disagreement with the ML verdict of ${hybridLocal?.ml_verdict || "Unknown"})\n4. confidence (50-100)\n5. threatVectors array (title, description, badge, type)\n6. threatCategory (Credential Theft / Business Email Compromise / Bank Scam / Delivery Scam / Lottery Scam / Invoice Scam / Crypto Scam / Technical Support Scam / General Phishing)\n7. recommendations array (strings)\nReturn valid JSON only.`;
+
+      const { Type } = await import("@google/genai");
+      const response = await generateContentWithRetryAndFallback(client, [{ text: prompt }], {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            riskScore: { type: Type.INTEGER },
+            riskLevel: { type: Type.STRING },
+            summary:   { type: Type.STRING },
+            confidence: { type: Type.NUMBER },
+            threatCategory: { type: Type.STRING },
+            threatVectors: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, description: { type: Type.STRING }, badge: { type: Type.STRING }, type: { type: Type.STRING } }, required: ["title", "description", "badge", "type"] } },
+            recommendations: { type: Type.ARRAY, items: { type: Type.STRING } },
+          },
+          required: ["riskScore", "riskLevel", "summary", "confidence", "threatVectors"],
+        },
+      }, model || "gemini-2.5-flash");
+
+      aiReport = JSON.parse(response.text.trim());
+    } catch (err: any) {
+      console.warn("[Hybrid] Gemini analysis failed:", err?.message);
+    }
+  }
+
+  // Step 3: Fuse scores — Rule 25% + ML 35% + AI 40%
+  const ruleScore = hybridLocal?.rule_score ?? 0;
+  const mlScore   = hybridLocal?.ml_probability ?? 0;
+  const aiScore   = aiReport?.riskScore ?? null;
+
+  let finalScore: number;
+  let scoreBreakdown: any;
+
+  if (aiScore !== null) {
+    finalScore = Math.round(ruleScore * 0.25 + mlScore * 0.35 + aiScore * 0.40);
+    scoreBreakdown = { rule: ruleScore, ml: mlScore, ai: aiScore, weights: { rule: 25, ml: 35, ai: 40 } };
+  } else {
+    // No AI — reweight to Rule 40% + ML 60%
+    finalScore = Math.round(ruleScore * 0.40 + mlScore * 0.60);
+    scoreBreakdown = { rule: ruleScore, ml: mlScore, ai: null, weights: { rule: 40, ml: 60, ai: 0 } };
+  }
+
+  const finalLevel = finalScore >= 70 ? "HIGH" : finalScore >= 35 ? "MEDIUM" : "LOW";
+  const threatCategory = aiReport?.threatCategory || hybridLocal?.rule_threat_category || "General Phishing";
+
+  // Build threat vectors — merge rule triggers + AI vectors
+  const ruleVectors = (hybridLocal?.rule_triggered || []).map((r: any) => ({
+    title: r.rule.replace(/_/g, " "),
+    description: r.description,
+    badge: r.severity.toUpperCase(),
+    type: r.severity === "critical" ? "critical" : r.severity === "high" ? "warning" : "info",
+    source: "Rule Engine",
+  }));
+
+  const aiVectors = (aiReport?.threatVectors || []).map((v: any) => ({ ...v, source: "AI Analysis" }));
+  const allVectors = [...ruleVectors, ...aiVectors].slice(0, 15);
+
+  const summary = aiReport?.summary ||
+    `Hybrid analysis: Rule Engine score ${ruleScore}/100, ML score ${mlScore}/100. ` +
+    (hybridLocal?.rule_triggered?.length ? `Triggered rules: ${hybridLocal.rule_triggered.map((r: any) => r.rule).join(", ")}.` : "No rules triggered.");
+
+  // ML vs AI Comparison
+  const mlIsPhishing = mlScore >= 60;
+  const aiIsPhishing = aiScore !== null ? (aiScore >= 60) : (finalScore >= 60);
+  const enginesAgree = aiScore !== null ? (mlIsPhishing === aiIsPhishing) : true;
+
+  const comparison = {
+    mlResult: {
+      verdict: hybridLocal?.ml_verdict || (mlIsPhishing ? "Phishing" : "Legitimate"),
+      confidence: hybridLocal?.ml_confidence ?? mlScore,
+      reasons: hybridLocal?.ml_reasons || []
+    },
+    aiResult: aiScore !== null ? {
+      verdict: aiIsPhishing ? "Phishing" : "Legitimate",
+      confidence: aiReport?.confidence ?? aiScore,
+      summary: aiReport?.summary || ""
+    } : null,
+    agreement: enginesAgree,
+    reason: enginesAgree 
+      ? `Both engines agree that this email is ${mlIsPhishing ? "Phishing" : "Legitimate"}.`
+      : `Disagreement: ML model flagged this as ${mlIsPhishing ? "Phishing" : "Legitimate"} while Gemini AI assessed it as ${aiIsPhishing ? "Phishing" : "Legitimate"}. This discrepancy suggests a complex case, such as clean text features masking a dangerous credential harvest URL or system mimicry header.`
+  };
+
+  return res.json({
+    riskScore:       finalScore,
+    riskLevel:       finalLevel,
+    summary,
+    confidence:      aiReport?.confidence ?? Math.max(60, 100 - Math.abs(finalScore - mlScore)),
+    threatVectors:   allVectors.length > 0 ? allVectors : [{ title: "No Threat Detected", description: "All indicators appear safe.", badge: "CLEAN", type: "success" }],
+    threatCategory,
+    scoreBreakdown,
+    recommendations: aiReport?.recommendations || [],
+    emailIntel:      hybridLocal?.email_intel || {},
+    comparison,
+    mlResult: {
+      verdict:    hybridLocal?.ml_verdict,
+      confidence: hybridLocal?.ml_confidence,
+      score:      mlScore,
+      reasons:    hybridLocal?.ml_reasons || [],
+    },
+    ruleResult: {
+      score:       ruleScore,
+      triggered:   hybridLocal?.rule_triggered || [],
+      category:    hybridLocal?.rule_threat_category,
+      urgency:     hybridLocal?.rule_urgency_score,
+    },
+    urlAnalyses: hybridLocal?.url_analyses || [],
+    isHybrid:    true,
+    aiAvailable: aiScore !== null,
+  });
+});
+
+// ─── DATASET MANAGER + RETRAINING ENDPOINTS ────────────────────────────────
+
+// GET /api/dataset-stats — build merged dataset and return statistics
+app.get("/api/dataset-stats", (req, res) => {
+  const scriptPath = path.join(process.cwd(), "karnakavach_backend", "dataset_builder.py");
+  if (!fs.existsSync(scriptPath)) {
+    return res.status(500).json({ error: "dataset_builder.py not found." });
+  }
+
+  const pyProcess = spawn(PYTHON_CMD, [scriptPath]);
+  let dataStr = "";
+  let errStr  = "";
+
+  pyProcess.stdout.on("data", (d) => { dataStr += d.toString(); });
+  pyProcess.stderr.on("data", (d) => { errStr  += d.toString(); });
+  pyProcess.on("close", (code) => {
+    // Last non-empty line is the JSON result
+    const lines = dataStr.split("\n").map((l: string) => l.trim()).filter(Boolean);
+    const jsonLine = lines.reverse().find((l: string) => l.startsWith("{"));
+    if (!jsonLine) {
+      return res.status(500).json({ error: "No JSON output from dataset builder.", details: errStr });
+    }
+    try {
+      res.json(JSON.parse(jsonLine));
+    } catch {
+      res.status(500).json({ error: "Failed to parse dataset stats.", details: errStr });
+    }
+  });
+});
+
+// POST /api/retrain-pipeline — full retrain using dataset_builder + retrain.py via SSE
+app.post("/api/retrain-pipeline", (req, res) => {
+  const scriptPath = path.join(process.cwd(), "karnakavach_backend", "retrain.py");
+  if (!fs.existsSync(scriptPath)) {
+    return res.status(500).json({ error: "retrain.py not found." });
+  }
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  const send = (data: object) => { res.write(`data: ${JSON.stringify(data)}\n\n`); };
+  send({ type: "start", message: "Retraining pipeline initiated..." });
+
+  const pyProcess = spawn(PYTHON_CMD, [scriptPath]);
+
+  pyProcess.stdout.on("data", (d) => {
+    const lines = d.toString().split("\n").filter((l: string) => l.trim());
+    for (const line of lines) {
+      if (line.startsWith("{")) {
+        try {
+          const result = JSON.parse(line);
+          send({ type: result.success ? "complete" : "error", ...result });
+        } catch {
+          send({ type: "log", message: line });
+        }
+      } else {
+        send({ type: "log", message: line });
+      }
+    }
+  });
+
+  pyProcess.stderr.on("data", (d) => {
+    const msg = d.toString().trim();
+    if (msg) send({ type: "log", message: `[STDERR] ${msg}` });
+  });
+
+  pyProcess.on("close", (code) => {
+    if (code !== 0) send({ type: "error", error: `Process exited with code ${code}` });
+    res.end();
+  });
+});
+
+// GET /api/training-metrics — return current metrics.json + dataset_stats.json
+app.get("/api/training-metrics", (req, res) => {
+  const scriptPath = path.join(process.cwd(), "karnakavach_backend", "metrics.py");
+  if (!fs.existsSync(scriptPath)) {
+    return res.status(500).json({ error: "metrics.py not found." });
+  }
+
+  const pyProcess = spawn(PYTHON_CMD, [scriptPath]);
+  let dataStr = "";
+
+  pyProcess.stdout.on("data", (d) => { dataStr += d.toString(); });
+  pyProcess.on("close", () => {
+    try {
+      res.json(JSON.parse(dataStr.trim()));
+    } catch {
+      res.status(500).json({ error: "Failed to read metrics." });
+    }
+  });
+});
+
+// GET /api/metrics-download — download metrics.json file
+app.get("/api/metrics-download", (req, res) => {
+  const metricsPath = path.join(process.cwd(), "karnakavach_backend", "models", "metrics.json");
+  if (!fs.existsSync(metricsPath)) {
+    return res.status(404).json({ error: "metrics.json not found." });
+  }
+  res.setHeader("Content-Type", "application/json");
+  res.setHeader("Content-Disposition", "attachment; filename=karnakavach_metrics.json");
+  fs.createReadStream(metricsPath).pipe(res);
+});
+
+// ─── DATASET MANAGER + RETRAINING ENDPOINTS END ─────────────────────────────
+
 startServer();

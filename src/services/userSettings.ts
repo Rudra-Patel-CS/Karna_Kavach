@@ -32,6 +32,7 @@ export interface AppSettings {
   notifications: boolean;
   exportFormat: string;
   language: string;
+  defaultEngine: "ai" | "ml" | "hybrid";
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -44,6 +45,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   notifications: true,
   exportFormat: "JSON",
   language:     "English",
+  defaultEngine: "hybrid",
 };
 
 const LS_KEY = "karnakavach_settings";

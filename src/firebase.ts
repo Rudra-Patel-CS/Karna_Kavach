@@ -5,6 +5,7 @@ import {
   collection, 
   doc, 
   setDoc, 
+  deleteDoc,
   onSnapshot, 
   query, 
   where, 
@@ -428,5 +429,20 @@ export function listenUserScansFromFirestore(
     handleFirestoreError(error, OperationType.LIST, scansCollectionPath);
     onError(error);
     return () => {};
+  }
+}
+
+export async function deleteScanFromFirestore(scanId: string): Promise<void> {
+  if (isDummy || !db) {
+    console.log("[KarnaKavach] Offline mode — delete scan simulated locally:", scanId);
+    return;
+  }
+  try {
+    const docRef = doc(db, "scans", scanId);
+    await deleteDoc(docRef);
+    console.log("[KarnaKavach] ✅ Scan deleted successfully from Firestore. docId:", scanId);
+  } catch (error: any) {
+    console.error("[KarnaKavach] ❌ Firestore scan delete FAILED:", error?.message || error);
+    throw error;
   }
 }

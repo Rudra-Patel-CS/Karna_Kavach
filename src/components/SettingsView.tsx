@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Key, Sparkles, Check, Moon, Sun, Monitor, Save, Cpu, Eye,
-  LayoutTemplate, FileJson, FileText, Bell, BellOff, Globe, Cloud, HardDrive, Database, Settings } from "lucide-react";
+  LayoutTemplate, FileJson, FileText, Bell, BellOff, Globe, Cloud, HardDrive, Database, Settings, ShieldAlert, Activity } from "lucide-react";
 import { isDummy } from "../firebase";
 import {
   loadSettings, saveSettings, listenSettings,
   DEFAULT_SETTINGS, type AppSettings,
 } from "../services/userSettings";
+import { fetchMLStatus } from "../services/mlService";
+import type { MLStatus } from "../types";
 import MLCenter from "./MLCenter";
 import DatasetManager from "./DatasetManager";
 
@@ -15,6 +17,17 @@ interface SettingsViewProps {
 }
 
 export default function SettingsView({ user, hasApiKey }: SettingsViewProps) {
+  const [mlStatus, setMlStatus] = useState<MLStatus | null>(null);
+  const [pythonStatus, setPythonStatus] = useState<"checking" | "online" | "offline">("checking");
+
+  useEffect(() => {
+    fetchMLStatus().then(status => {
+      setMlStatus(status);
+      setPythonStatus(status ? "online" : "offline");
+    }).catch(() => {
+      setPythonStatus("offline");
+    });
+  }, []);
   const [activeTab, setActiveTab]     = useState<"general" | "ml" | "dataset">("general");
   const [theme, setTheme]             = useState(DEFAULT_SETTINGS.theme);
   const [model, setModel]             = useState(DEFAULT_SETTINGS.model);
@@ -25,6 +38,7 @@ export default function SettingsView({ user, hasApiKey }: SettingsViewProps) {
   const [notifications, setNotifications] = useState(DEFAULT_SETTINGS.notifications);
   const [exportFormat, setExportFormat]   = useState(DEFAULT_SETTINGS.exportFormat);
   const [language, setLanguage]           = useState(DEFAULT_SETTINGS.language);
+  const [defaultEngine, setDefaultEngine] = useState<"ai" | "ml" | "hybrid">(DEFAULT_SETTINGS.defaultEngine);
   const [saveIndicator, setSaveIndicator] = useState<"idle"|"saving"|"saved"|"offline">("idle");
   const [settingsSource, setSettingsSource] = useState<"firestore"|"local">("local");
 
@@ -47,6 +61,7 @@ export default function SettingsView({ user, hasApiKey }: SettingsViewProps) {
     setSaveHistory(s.saveHistory); setAutoUrlScan(s.autoUrlScan);
     setEnableOcr(s.enableOcr); setNotifications(s.notifications);
     setExportFormat(s.exportFormat); setLanguage(s.language);
+    setDefaultEngine(s.defaultEngine || "hybrid");
     applyTheme(s.theme);
   }
 
@@ -61,7 +76,7 @@ export default function SettingsView({ user, hasApiKey }: SettingsViewProps) {
   }
 
   const handleSave = async () => {
-    const s: AppSettings = { theme, model, sensitivity, saveHistory, autoUrlScan, enableOcr, notifications, exportFormat, language };
+    const s: AppSettings = { theme, model, sensitivity, saveHistory, autoUrlScan, enableOcr, notifications, exportFormat, language, defaultEngine };
     setSaveIndicator("saving");
     applyTheme(theme);
     window.dispatchEvent(new Event("karnakavach_settings_updated"));
@@ -204,6 +219,15 @@ export default function SettingsView({ user, hasApiKey }: SettingsViewProps) {
               </select>
             </div>
             <div className="flex flex-col gap-2 pt-2 border-t border-outline-variant/10">
+              <label className="text-xs font-bold text-on-surface">Default Analysis Engine</label>
+              <select value={defaultEngine} onChange={e => setDefaultEngine(e.target.value as any)}
+                className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg px-3 py-2 text-xs text-on-surface focus:outline-none focus:border-primary-fixed-dim font-mono">
+                <option value="hybrid">Hybrid Engine (Heuristic + ML + AI)</option>
+                <option value="ai">Gemini AI Engine (Linguistics)</option>
+                <option value="ml">Machine Learning Engine (Offline)</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-2 pt-2 border-t border-outline-variant/10">
               <label className="text-xs font-bold text-on-surface">Scan Sensitivity Level</label>
               <div className="grid grid-cols-3 gap-2">
                 {["Low","Medium","High"].map(lvl => (
@@ -277,48 +301,72 @@ export default function SettingsView({ user, hasApiKey }: SettingsViewProps) {
           </div>
         </div>
 
-        {/* API Credentials */}
-        <div className="glass-panel p-6 rounded-3xl flex flex-col gap-5 border border-neutral-800 lg:col-span-2">
+        {/* System Diagnostics Dashboard */}
+        <div className="glass-panel p-6 rounded-3xl flex flex-col gap-5 border border-outline-variant/30 lg:col-span-2">
           <h3 className="font-display font-black text-[10px] uppercase tracking-widest text-[#7df4ff] flex items-center gap-2">
-            <Key className="w-4 h-4 text-[#00dbe9]" /> Core Credentials Integration
+            <Activity className="w-4 h-4 text-[#00dbe9]" /> System Diagnostics Dashboard
           </h3>
-          <div className="flex flex-col md:flex-row gap-6">
-            <div className="flex-1 space-y-3">
-              <div className="p-4 bg-surface-container-low/60 rounded-xl border border-outline-variant/20 flex flex-col gap-2">
-                <div className="flex justify-between items-center">
-                  <span className="font-sans font-bold text-on-surface text-sm">Gemini Live Analysis Engine</span>
-                  <span className={`px-2.5 py-0.5 rounded-full font-mono text-[9px] uppercase tracking-wider font-extrabold border ${hasApiKey ? "bg-primary-container/10 border-primary-fixed-dim/20 text-primary-fixed-dim" : "bg-error-container/10 border-error/20 text-error"}`}>
-                    {hasApiKey ? "ACTIVE COGNITIVE" : "SIMULATOR FALLBACK"}
-                  </span>
-                </div>
-                <p className="text-outline text-[11px] leading-relaxed mt-1">
-                  {hasApiKey
-                    ? "Karna_Kavach Live Scan is fully operational. Payloads are processed securely using advanced cognitive AI."
-                    : "Running in simulated sandbox mode. Configure your Gemini API Key in .env.local to enable real scans."}
-                </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Firebase Sync Check */}
+            <div className="p-4 bg-surface-container-low/60 rounded-xl border border-outline-variant/20 flex flex-col justify-between gap-2">
+              <div>
+                <span className="font-mono text-[9px] uppercase tracking-widest text-outline block mb-1">Firebase Sync Status</span>
+                <span className="font-sans font-bold text-on-surface text-sm">Realtime Firestore</span>
               </div>
-              <div className="p-4 bg-surface-container-lowest border border-outline-variant/15 rounded-xl flex gap-3 text-[11px]">
-                <Sparkles className="w-5 h-5 text-[#00dbe9] shrink-0 mt-0.5" />
-                <div className="text-on-surface-variant space-y-1">
-                  <strong className="text-on-surface block">Dynamic Secret Management Enforcer:</strong>
-                  Karna_Kavach keys are managed securely by the platform environment.
-                  Never paste API secrets directly into raw code or input boxes.
-                </div>
-              </div>
+              <span className={`px-2.5 py-0.5 rounded font-mono text-[9px] uppercase tracking-wider font-extrabold border w-fit ${isDummy ? "bg-error-container/10 border-error/20 text-error" : "bg-emerald-500/10 border-emerald-500/25 text-emerald-400"}`}>
+                {isDummy ? "Offline Simulator" : "Online Sync Active"}
+              </span>
             </div>
-            <div className="md:w-64 space-y-3 font-sans text-xs">
+            {/* Gemini API Check */}
+            <div className="p-4 bg-surface-container-low/60 rounded-xl border border-outline-variant/20 flex flex-col justify-between gap-2">
+              <div>
+                <span className="font-mono text-[9px] uppercase tracking-widest text-outline block mb-1">Gemini AI Status</span>
+                <span className="font-sans font-bold text-on-surface text-sm">Cognitive Gemini Core</span>
+              </div>
+              <span className={`px-2.5 py-0.5 rounded font-mono text-[9px] uppercase tracking-wider font-extrabold border w-fit ${hasApiKey ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-400" : "bg-error-container/10 border-error/20 text-error"}`}>
+                {hasApiKey ? "Active (Live)" : "Mock Fallback"}
+              </span>
+            </div>
+            {/* Python Subprocess Check */}
+            <div className="p-4 bg-surface-container-low/60 rounded-xl border border-outline-variant/20 flex flex-col justify-between gap-2">
+              <div>
+                <span className="font-mono text-[9px] uppercase tracking-widest text-outline block mb-1">Python Backend Status</span>
+                <span className="font-sans font-bold text-on-surface text-sm">Local Subprocess Gateway</span>
+              </div>
+              <span className={`px-2.5 py-0.5 rounded font-mono text-[9px] uppercase tracking-wider font-extrabold border w-fit ${pythonStatus === "online" ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-400" : pythonStatus === "checking" ? "bg-amber-500/15 border-amber-500/30 text-amber-400" : "bg-error-container/10 border-error/20 text-error"}`}>
+                {pythonStatus === "online" ? "Online & Responsive" : pythonStatus === "checking" ? "Verifying link..." : "Offline / Unresponsive"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* ML Model Performance Metrics Summary Card */}
+        <div className="glass-panel p-6 rounded-3xl flex flex-col gap-5 border border-neutral-800 lg:col-span-1">
+          <h3 className="font-display font-black text-[10px] uppercase tracking-widest text-on-surface-variant flex items-center gap-2">
+            <Cpu className="w-4 h-4 text-outline" /> Active ML Model Core Stats
+          </h3>
+          {mlStatus?.metrics ? (
+            <div className="space-y-2.5">
               {[
-                ["Operative ID", user?.uid || "auth_guest"],
-                ["Clearance", "SysAdmin"],
-                ["Auth Target", user?.email || "anonymous"],
-              ].map(([lbl, val]) => (
-                <div key={lbl} className="flex justify-between items-center py-2 border-b border-outline-variant/10">
-                  <span className="text-outline uppercase tracking-wider text-[10px]">{lbl}</span>
-                  <span className={`font-mono font-bold truncate max-w-[140px] ${lbl === "Clearance" ? "text-[#00dbe9] font-display text-[10px] uppercase tracking-widest" : "text-on-surface"}`}>{val}</span>
+                { label: "Model Version", val: mlStatus?.version_label || "v1.0.0" },
+                { label: "Training Date", val: mlStatus?.last_trained ? new Date(mlStatus.last_trained).toLocaleDateString() : "Unknown" },
+                { label: "Dataset Size", val: `${(mlStatus?.dataset_size || 0).toLocaleString()} samples` },
+                { label: "Accuracy Score", val: `${((mlStatus?.metrics?.accuracy || 0) * 100).toFixed(1)}%` },
+                { label: "Precision Rate", val: `${((mlStatus?.metrics?.precision || 0) * 100).toFixed(1)}%` },
+                { label: "Recall Rate", val: `${((mlStatus?.metrics?.recall || 0) * 100).toFixed(1)}%` },
+                { label: "F1 Performance", val: `${((mlStatus?.metrics?.f1_score || 0) * 100).toFixed(1)}%` },
+              ].map(({ label, val }) => (
+                <div key={label} className="flex justify-between items-center text-xs border-b border-outline-variant/10 pb-1.5 last:border-0 last:pb-0 font-sans">
+                  <span className="text-on-surface-variant">{label}</span>
+                  <span className="font-mono font-bold text-on-surface">{val}</span>
                 </div>
               ))}
             </div>
-          </div>
+          ) : (
+            <p className="text-[10px] text-outline-variant font-mono py-4 text-center">
+              No active model metrics available. Check retraining status under MLCenter tab.
+            </p>
+          )}
         </div>
 
           </div>

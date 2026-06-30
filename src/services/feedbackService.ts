@@ -31,7 +31,7 @@ import type { FeedbackLabel, FeedbackRecord, FeedbackStats } from "../types";
 export interface SaveFeedbackInput {
   userId: string;
   scanId: string;
-  engine: "Gemini AI" | "Machine Learning";
+  engine: "Gemini AI" | "Machine Learning" | "Hybrid";
   sender: string;
   subject: string;
   body: string;

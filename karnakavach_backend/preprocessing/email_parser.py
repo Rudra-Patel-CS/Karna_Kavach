@@ -20,6 +20,7 @@ def parse_raw_email(raw_text: str) -> Dict[str, Any]:
         "bcc": "",
         "body": "",
         "urls": [],
+        "attachments": [],
         "parsed_successfully": False,
         "confidence_scores": {
             "from_name": 0.0,
@@ -68,13 +69,27 @@ def parse_raw_email(raw_text: str) -> Dict[str, Any]:
                 parsed_data["from_name"] = from_raw
                 parsed_data["confidence_scores"]["from_name"] = 0.90
 
-        # Extract body
+        # Extract body and attachments
         body_parts = []
+        attachments = []
         if msg.is_multipart():
             for part in msg.walk():
                 content_type = part.get_content_type()
-                content_disp = str(part.get('Content-Disposition'))
-                if 'attachment' not in content_disp:
+                content_disp = str(part.get('Content-Disposition') or '')
+                filename = part.get_filename()
+                
+                if filename or 'attachment' in content_disp:
+                    try:
+                        payload = part.get_payload(decode=True)
+                        size_bytes = len(payload) if payload else 0
+                    except Exception:
+                        size_bytes = 0
+                    attachments.append({
+                        "filename": filename or "unnamed_attachment",
+                        "content_type": content_type,
+                        "size_bytes": size_bytes
+                    })
+                else:
                     try:
                         payload = part.get_payload(decode=True)
                         if payload:
@@ -92,6 +107,7 @@ def parse_raw_email(raw_text: str) -> Dict[str, Any]:
                 body_parts.append(msg.get_payload())
                 
         parsed_data["body"] = "\n".join(body_parts) if body_parts else str(msg.get_payload() or "")
+        parsed_data["attachments"] = attachments
         if parsed_data["body"]: parsed_data["confidence_scores"]["body"] = 1.0
         parsed_data["parsed_successfully"] = True
 
@@ -124,6 +140,7 @@ def parse_raw_email(raw_text: str) -> Dict[str, Any]:
             explicit_subj = re.match(r"(?:Subject|Title):\s*(.*)", line, re.IGNORECASE)
             explicit_date = re.match(r"(?:Date|Sent):\s*(.*)", line, re.IGNORECASE)
             explicit_to = re.match(r"(?:To|Recipient):\s*(.*)", line, re.IGNORECASE)
+            explicit_reply = re.match(r"(?:Reply-To|Reply To):\s*(.*)", line, re.IGNORECASE)
             
             if explicit_from:
                 from_found = True
@@ -140,6 +157,10 @@ def parse_raw_email(raw_text: str) -> Dict[str, Any]:
                 else:
                     parsed_data["from_name"] = raw_f.strip()
                     parsed_data["confidence_scores"]["from_name"] = 0.90
+                body_start_idx = max(body_start_idx, i + 1)
+                
+            elif explicit_reply:
+                parsed_data["reply_to"] = explicit_reply.group(1).strip()
                 body_start_idx = max(body_start_idx, i + 1)
                 
             elif explicit_subj:

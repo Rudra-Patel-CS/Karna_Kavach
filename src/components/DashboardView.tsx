@@ -19,9 +19,13 @@ import {
   MessageSquare,
   ThumbsUp,
   ThumbsDown,
-  Target
+  Target,
+  Brain,
+  Activity,
+  FileText,
+  Cpu
 } from "lucide-react";
-import { Scan, DashboardStats, FeedbackStats } from "../types";
+import { Scan, DashboardStats, FeedbackStats, MLStatus } from "../types";
 import { 
   BarChart, 
   Bar, 
@@ -31,10 +35,13 @@ import {
   ResponsiveContainer, 
   PieChart, 
   Pie, 
-  Cell 
+  Cell,
+  LineChart,
+  Line
 } from "recharts";
 import { motion, AnimatePresence } from "motion/react";
 import { getFeedbackStats } from "../services/feedbackService";
+import { fetchMLStatus } from "../services/mlService";
 
 interface DashboardViewProps {
   scans: Scan[];
@@ -51,11 +58,13 @@ export default function DashboardView({ scans, onSelectScan, onInitiateScanMail,
   const [urlResult, setUrlResult] = useState<any>(null);
   const [urlError, setUrlError] = useState("");
   const [feedbackStats, setFeedbackStats] = useState<FeedbackStats | null>(null);
+  const [mlStatus, setMlStatus] = useState<MLStatus | null>(null);
 
-  // Load feedback stats when userId is available
+  // Load feedback and ML stats
   useEffect(() => {
     if (!userId) return;
     getFeedbackStats(userId).then(setFeedbackStats);
+    fetchMLStatus().then(setMlStatus).catch(() => {});
   }, [userId]);
 
   const handleAnalyzeUrl = async () => {
@@ -108,16 +117,102 @@ export default function DashboardView({ scans, onSelectScan, onInitiateScanMail,
     { name: "Phishing", value: Math.round((highRiskCount / totalCircle) * 100), color: "#ffb4ab" },
   ];
 
-  // Recharts simulated weekly scanning activity (keep as visual filler or compute if you have dates, let's keep it as visual filler since it's hard to simulate days beautifully with few real data points, or we could just keep the visual graph but low numbers)
-  const weeklyActivityData = [
-    { day: "Mon", volume: 14, threats: 1 },
-    { day: "Tue", volume: 18, threats: 2 },
-    { day: "Wed", volume: 29, threats: 4 },
-    { day: "Thu", volume: 16, threats: 1 },
-    { day: "Fri", volume: 21, threats: 3 },
-    { day: "Sat", volume: 9, threats: 0 },
-    { day: "Sun", volume: 7, threats: 0 },
-  ];
+  // ── Compute dynamic statistics ──
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+  let todayScansCount = 0;
+  let weeklyScansCount = 0;
+  let monthlyScansCount = 0;
+  let totalRiskScoreSum = 0;
+  let aiScansCount = 0;
+  let mlScansCount = 0;
+
+  const categoryFrequency: Record<string, number> = {};
+  const senderFrequency: Record<string, number> = {};
+  const domainFrequency: Record<string, number> = {};
+
+  // Group scans for timeline chart (last 7 days)
+  const last7Days: { day: string; dateStr: string; volume: number; threats: number }[] = [];
+  const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+    const dayName = daysOfWeek[d.getDay()];
+    const dateStr = d.toDateString();
+    last7Days.push({ day: dayName, dateStr, volume: 0, threats: 0 });
+  }
+
+  scans.forEach(scan => {
+    const scanDate = new Date(scan.createdAt);
+    totalRiskScoreSum += scan.riskScore;
+
+    // Time ranges
+    if (scanDate >= startOfToday) todayScansCount++;
+    if (scanDate >= oneWeekAgo) weeklyScansCount++;
+    if (scanDate >= oneMonthAgo) monthlyScansCount++;
+
+    // Engine usage
+    if (scan.engine === "Gemini AI" || scan.engine === "Hybrid") aiScansCount++;
+    if (scan.engine === "Machine Learning" || scan.engine === "Hybrid") mlScansCount++;
+
+    // Categories
+    const category = scan.threatCategory || "General Phishing";
+    categoryFrequency[category] = (categoryFrequency[category] || 0) + 1;
+
+    // High risk frequencies
+    if (scan.riskScore >= 70) {
+      // Senders
+      const sender = scan.sender || "Anonymous";
+      senderFrequency[sender] = (senderFrequency[sender] || 0) + 1;
+
+      // Domains
+      let domain = "unknown";
+      if (sender.includes("@")) {
+        domain = sender.split("@").pop() || "unknown";
+      } else if (sender.includes("<") && sender.includes(">")) {
+        const match = sender.match(/<([^>]+)>/);
+        if (match && match[1].includes("@")) {
+          domain = match[1].split("@").pop() || "unknown";
+        }
+      }
+      domainFrequency[domain] = (domainFrequency[domain] || 0) + 1;
+    }
+
+    // Timeline grouping
+    const scanDateStr = scanDate.toDateString();
+    const timelineDay = last7Days.find(day => day.dateStr === scanDateStr);
+    if (timelineDay) {
+      timelineDay.volume++;
+      if (scan.riskScore >= 70) {
+        timelineDay.threats++;
+      }
+    }
+  });
+
+  const avgRiskScore = scans.length > 0 ? Math.round(totalRiskScoreSum / scans.length) : 0;
+
+  // Categories list for charts
+  const categoryChartData = Object.entries(categoryFrequency).map(([name, value]) => ({
+    name,
+    value,
+  })).sort((a, b) => b.value - a.value);
+
+  const mostCommonThreatCategory = categoryChartData[0]?.name || "None Detected";
+
+  // Top dangerous senders/domains
+  const topDangerousSenders = Object.entries(senderFrequency)
+    .map(([sender, count]) => ({ sender, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3);
+
+  const topDangerousDomains = Object.entries(domainFrequency)
+    .map(([domain, count]) => ({ domain, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3);
+
+  const weeklyActivityData = last7Days;
 
   const allScans = scans.filter(scan => {
     const searchLow = searchTerm.toLowerCase();
@@ -227,64 +322,65 @@ export default function DashboardView({ scans, onSelectScan, onInitiateScanMail,
           </div>
         </div>
 
-        {/* Card 3: Metrics Bubble (col-span-3, Risk Accuracy Bubble) */}
+        {/* Card 3: Average Risk Score (col-span-12 md:col-span-3, Bento Card) */}
         <div id="bento-accuracy" className="col-span-12 md:col-span-3 bento-card flex flex-col items-center justify-center text-center min-h-[160px]">
-          <div className="text-4xl font-display font-bold text-emerald-400 tracking-tight drop-shadow-[0_0_15px_rgba(52,211,153,0.15)] mb-1">
-            {stats.avgConfidence}%
+          <div className="text-4xl font-display font-bold tracking-tight drop-shadow-[0_0_15px_rgba(255,180,171,0.15)] mb-1"
+               style={{ color: avgRiskScore >= 70 ? "#ffb4ab" : avgRiskScore >= 35 ? "#c084fc" : "#00dbe9" }}>
+            {avgRiskScore}%
           </div>
           <p className="text-[10px] text-on-surface-variant uppercase tracking-widest font-bold">
-            Analysis Precision
+            Average Risk Score
           </p>
           <div className="flex gap-1 mt-4">
-            <div className="w-1 h-3.5 bg-emerald-500/20 rounded-full" />
-            <div className="w-1 h-5.5 bg-emerald-500/40 rounded-full" />
-            <div className="w-1 h-2.5 bg-emerald-500/60 rounded-full animate-pulse" />
-            <div className="w-1 h-4.5 bg-emerald-500/70 rounded-full" />
-            <div className="w-1 h-7.5 bg-emerald-500 rounded-full" />
-            <div className="w-1 h-3.5 bg-emerald-500/30 rounded-full animate-pulse" />
+            <div className="w-1 h-3.5 bg-indigo-500/20 rounded-full" />
+            <div className="w-1 h-5.5 bg-indigo-500/40 rounded-full" />
+            <div className="w-1 h-2.5 bg-indigo-500/60 rounded-full animate-pulse" />
+            <div className="w-1 h-4.5 bg-indigo-500/70 rounded-full" />
+            <div className="w-1 h-7.5 bg-[#00dbe9] rounded-full" />
+            <div className="w-1 h-3.5 bg-indigo-500/30 rounded-full animate-pulse" />
           </div>
         </div>
 
-        {/* Card 4: System Telemetry Monitor (col-span-3, Gauge bars) */}
+        {/* Card 4: Scan Volumes (col-span-12 md:col-span-3, Bento Card) */}
         <div id="bento-sysmon" className="col-span-12 md:col-span-3 bento-card flex flex-col justify-between min-h-[200px]">
           <div>
             <h3 className="text-[10px] font-bold uppercase text-on-surface-variant tracking-widest mb-4">
-              Overview
+              Scan Logs Volume
             </h3>
             <div className="space-y-4">
               <div className="relative">
                 <div className="flex justify-between text-[10px] mb-1.5 font-mono">
-                  <span className="text-on-surface-variant">Total Scans Logs</span>
-                  <span className="text-primary-fixed-dim font-bold">{stats.totalScans.toLocaleString()}</span>
+                  <span className="text-on-surface-variant">Today's Scans</span>
+                  <span className="text-primary-fixed-dim font-bold">{todayScansCount}</span>
                 </div>
                 <div className="w-full h-1 bg-surface-container rounded-full overflow-hidden">
-                  <div className="w-[85%] h-full bg-primary-fixed" />
+                  <div className="h-full bg-primary-fixed" style={{ width: `${Math.min(100, (todayScansCount / (totalScans || 1)) * 100)}%` }} />
                 </div>
               </div>
               
               <div className="relative">
                 <div className="flex justify-between text-[10px] mb-1.5 font-mono">
-                  <span className="text-on-surface-variant">Defended Threats</span>
-                  <span className="text-emerald-500 font-bold">{stats.threatsBlocked.toLocaleString()}</span>
+                  <span className="text-on-surface-variant">Weekly Scans</span>
+                  <span className="text-[#00dbe9] font-bold">{weeklyScansCount}</span>
                 </div>
                 <div className="w-full h-1 bg-surface-container rounded-full overflow-hidden">
-                  <div className="w-[68%] h-full bg-emerald-500" />
+                  <div className="h-full bg-[#00dbe9]" style={{ width: `${Math.min(100, (weeklyScansCount / (totalScans || 1)) * 100)}%` }} />
                 </div>
               </div>
 
               <div className="relative">
                 <div className="flex justify-between text-[10px] mb-1.5 font-mono">
-                  <span className="text-on-surface-variant">Flagged Risks</span>
-                  <span className="text-error font-bold">{stats.highRiskEmails}</span>
+                  <span className="text-on-surface-variant">Monthly Scans</span>
+                  <span className="text-secondary font-bold">{monthlyScansCount}</span>
                 </div>
                 <div className="w-full h-1 bg-surface-container rounded-full overflow-hidden">
-                  <div className="w-[42%] h-full bg-error" />
+                  <div className="h-full bg-secondary" style={{ width: `${Math.min(100, (monthlyScansCount / (totalScans || 1)) * 100)}%` }} />
                 </div>
               </div>
             </div>
           </div>
           <p className="text-[9px] text-on-surface-variant leading-relaxed pt-2 border-t border-outline-variant/30 mt-4 font-mono">
-            Karna_Kavach assessment cores operating at nominal baseline.
+            Live telemetry tracking active.
           </p>
         </div>
 
@@ -446,6 +542,167 @@ export default function DashboardView({ scans, onSelectScan, onInitiateScanMail,
                 <Bar dataKey="threats" fill="#f87171" radius={[4, 4, 0, 0]} name="Defended Phishing" />
               </BarChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Card 8: Engine Usage & Threat Categories (col-span-12 md:col-span-4) */}
+        <div className="col-span-12 md:col-span-4 bento-card flex flex-col justify-between min-h-[300px]">
+          <div>
+            <h3 className="text-[10px] font-bold uppercase text-on-surface-variant tracking-widest mb-3 flex items-center gap-1.5 font-display">
+              <Cpu className="w-3.5 h-3.5 text-primary-fixed-dim" />
+              Engine Usage & Threat Analysis
+            </h3>
+            
+            <div className="space-y-3.5 my-2">
+              <div className="p-3 bg-surface-container-low/60 rounded-xl border border-outline-variant/20">
+                <span className="text-[9px] uppercase tracking-widest text-outline block mb-1 font-mono">Most Common Category</span>
+                <span className="font-display font-black text-[10px] text-[#ffb4ab] bg-[#ffb4ab]/10 border border-[#ffb4ab]/25 px-2.5 py-1 rounded-full uppercase inline-block">
+                  {mostCommonThreatCategory}
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                <span className="text-[9px] uppercase tracking-widest text-outline block font-mono">Engine Distribution</span>
+                
+                <div className="relative">
+                  <div className="flex justify-between text-[10px] mb-1 font-mono">
+                    <span className="text-on-surface-variant">Cognitive Gemini AI</span>
+                    <span className="text-primary-fixed-dim font-bold">{aiScansCount} scans</span>
+                  </div>
+                  <div className="w-full h-1 bg-surface-container rounded-full overflow-hidden">
+                    <div className="h-full bg-primary-fixed" style={{ width: `${Math.min(100, (aiScansCount / (totalScans || 1)) * 100)}%` }} />
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <div className="flex justify-between text-[10px] mb-1 font-mono">
+                    <span className="text-on-surface-variant">Machine Learning</span>
+                    <span className="text-secondary font-bold">{mlScansCount} scans</span>
+                  </div>
+                  <div className="w-full h-1 bg-surface-container rounded-full overflow-hidden">
+                    <div className="h-full bg-secondary" style={{ width: `${Math.min(100, (mlScansCount / (totalScans || 1)) * 100)}%` }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <p className="text-[9px] text-on-surface-variant leading-relaxed pt-2 border-t border-outline-variant/30 font-mono">
+            Hybrid analyzer fusion weight is rule 25% | ML 35% | AI 40%.
+          </p>
+        </div>
+
+        {/* Card 9: Top Dangerous Senders & Domains (col-span-12 md:col-span-4) */}
+        <div className="col-span-12 md:col-span-4 bento-card flex flex-col justify-between min-h-[300px]">
+          <div>
+            <h3 className="text-[10px] font-bold uppercase text-on-surface-variant tracking-widest mb-3 flex items-center gap-1.5 font-display">
+              <ShieldAlert className="w-3.5 h-3.5 text-error animate-pulse" />
+              Sender / Domain Threat Indicators
+            </h3>
+            
+            <div className="space-y-3">
+              <div>
+                <span className="text-[9px] uppercase tracking-widest text-outline block mb-1 font-mono">Top Dangerous Senders</span>
+                <div className="space-y-1.5">
+                  {topDangerousSenders.map(({ sender, count }) => (
+                    <div key={sender} className="flex justify-between items-center text-xs p-1.5 bg-surface-container-lowest/80 border border-outline-variant/15 rounded-lg">
+                      <span className="truncate max-w-[180px] font-mono text-[9px] font-semibold text-neutral-300">{sender}</span>
+                      <span className="text-error font-mono text-[9px] font-bold shrink-0">{count} events</span>
+                    </div>
+                  ))}
+                  {topDangerousSenders.length === 0 && (
+                    <span className="text-[10px] text-outline font-mono block">No high-risk vectors detected yet.</span>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <span className="text-[9px] uppercase tracking-widest text-outline block mb-1 font-mono">Top Dangerous Domains</span>
+                <div className="space-y-1.5">
+                  {topDangerousDomains.map(({ domain, count }) => (
+                    <div key={domain} className="flex justify-between items-center text-xs p-1.5 bg-surface-container-lowest/80 border border-outline-variant/15 rounded-lg">
+                      <span className="truncate max-w-[180px] font-mono text-[9px] font-bold text-neutral-300">{domain}</span>
+                      <span className="text-error font-mono text-[9px] font-bold shrink-0">{count} events</span>
+                    </div>
+                  ))}
+                  {topDangerousDomains.length === 0 && (
+                    <span className="text-[10px] text-outline font-mono block">No high-risk domains flagged.</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+          <p className="text-[9px] text-on-surface-variant leading-relaxed pt-2 border-t border-outline-variant/30 font-mono">
+            Domains extracted from high-severity (risk score &gt;= 70) events.
+          </p>
+        </div>
+
+        {/* Card 10: Model Status Core (col-span-12 md:col-span-4) */}
+        <div className="col-span-12 md:col-span-4 bento-card flex flex-col justify-between min-h-[300px]">
+          <div>
+            <h3 className="text-[10px] font-bold uppercase text-on-surface-variant tracking-widest mb-3 flex items-center gap-1.5 font-display">
+              <Brain className="w-3.5 h-3.5 text-[#00dbe9]" />
+              Active ML Model Status
+            </h3>
+            
+            {mlStatus ? (
+              <div className="space-y-2">
+                {[
+                  { label: "Active Model", val: mlStatus.version_label },
+                  { label: "Dataset Size", val: `${mlStatus.dataset_size.toLocaleString()} samples` },
+                  { label: "Feedback Verified", val: `${mlStatus.feedback_size} samples` },
+                  { label: "Model Accuracy", val: mlStatus.metrics ? `${(mlStatus.metrics.accuracy * 100).toFixed(1)}%` : "Under Retraining" },
+                  { label: "Training Date", val: mlStatus.last_trained ? new Date(mlStatus.last_trained).toLocaleDateString() : "Never" }
+                ].map(({ label, val }) => (
+                  <div key={label} className="flex justify-between items-center py-1.5 border-b border-outline-variant/10 last:border-0 last:pb-0">
+                    <span className="text-xs text-on-surface-variant font-medium">{label}</span>
+                    <span className="font-mono text-xs font-bold text-on-surface">{val}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-6 flex items-center justify-center gap-2 text-outline-variant">
+                <span className="w-4 h-4 border-2 border-outline-variant border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs font-mono">Connecting ML Subsystem...</span>
+              </div>
+            )}
+          </div>
+          <p className="text-[9px] text-on-surface-variant leading-relaxed pt-2 border-t border-outline-variant/30 font-mono">
+            Model parameters synced dynamically with ML retraining cycles.
+          </p>
+        </div>
+
+        {/* Card 11: Recent Security Activities (col-span-12) */}
+        <div className="col-span-12 bento-card min-h-[220px]">
+          <h3 className="text-[10px] font-bold uppercase text-on-surface-variant tracking-widest mb-4 flex items-center gap-1.5 font-display">
+            <Activity className="w-4 h-4 text-primary-fixed-dim" />
+            Recent Security Telemetry Log Activity Timeline
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3.5 mt-2">
+            {scans.slice(0, 5).map((scan, i) => {
+              const riskColor = scan.riskLevel === "HIGH" ? "border-error/25 bg-error/5 text-error" : scan.riskLevel === "MEDIUM" ? "border-secondary-container/20 bg-secondary-container/5 text-secondary" : "border-primary-fixed-dim/10 bg-primary-container/2 text-primary-fixed-dim";
+              return (
+                <div key={scan.id || i} onClick={() => onSelectScan(scan)} className={`p-3 rounded-2xl border transition-all hover:scale-[1.02] cursor-pointer flex flex-col justify-between gap-3 ${riskColor}`}>
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="font-mono text-[9px] text-neutral-400">{new Date(scan.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                      <span className="font-display font-black text-xs">{scan.riskScore}%</span>
+                    </div>
+                    <p className="font-sans font-bold text-xs truncate text-on-surface mb-0.5">{scan.sender}</p>
+                    <p className="font-sans text-[10px] truncate text-on-surface-variant">{scan.subject || "No Subject"}</p>
+                  </div>
+                  <span className="font-mono text-[8px] uppercase tracking-wider block font-black border-t border-white/5 pt-2">
+                    {scan.riskLevel} Risk • {scan.engine || "Hybrid"}
+                  </span>
+                </div>
+              );
+            })}
+            {scans.length === 0 && (
+              <div className="col-span-5 py-8 text-center text-xs text-neutral-500 font-mono">
+                No telemetry history registered in Firestore database logs.
+              </div>
+            )}
           </div>
         </div>
 

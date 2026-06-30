@@ -17,6 +17,8 @@ export interface Scan {
   sender: string;
   subject: string;
   body: string;
+  replyTo?: string;
+  attachments?: { filename: string; contentType: string; sizeBytes: number }[];
   riskScore: number;
   riskLevel: 'HIGH' | 'MEDIUM' | 'LOW';
   createdAt: string;
@@ -25,7 +27,21 @@ export interface Scan {
   threatVectors: ThreatVector[];
   isSimulated?: boolean;
   urlAnalysis?: UrlAnalysis[];
-  engine?: "Gemini AI" | "Machine Learning";
+  engine?: "Gemini AI" | "Machine Learning" | "Hybrid";
+  // Hybrid analysis extras
+  threatCategory?: string;
+  scoreBreakdown?: { rule: number; ml: number; ai: number | null; weights: { rule: number; ml: number; ai: number } };
+  recommendations?: string[];
+  emailIntel?: Record<string, any>;
+  mlResult?: { verdict: string; confidence: number; score: number; reasons: string[] };
+  ruleResult?: { score: number; triggered: any[]; category: string; urgency: number };
+  ruleVectors?: ThreatVector[];
+  comparison?: {
+    mlResult: { verdict: string; confidence: number; reasons?: string[] };
+    aiResult: { verdict: string; confidence: number; summary: string } | null;
+    agreement: boolean;
+    reason: string;
+  };
 }
 
 export interface DashboardStats {
@@ -86,7 +102,7 @@ export interface FeedbackRecord {
   feedbackId: string;       // Firestore document ID
   userId: string;
   scanId: string;
-  engine: "Gemini AI" | "Machine Learning";
+  engine: "Gemini AI" | "Machine Learning" | "Hybrid";
   sender: string;
   subject: string;
   body: string;

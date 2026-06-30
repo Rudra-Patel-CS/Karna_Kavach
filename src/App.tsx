@@ -15,7 +15,8 @@ import {
   logoutUser, 
   verifyFirestoreConnectivity, 
   saveScanToFirestore, 
-  listenUserScansFromFirestore 
+  listenUserScansFromFirestore,
+  deleteScanFromFirestore
 } from "./firebase";
 import { createOrUpdateUserProfile } from "./services/userProfile";
 import { onAuthStateChanged } from "firebase/auth";
@@ -233,6 +234,87 @@ export default function App() {
     localStorage.removeItem("karnakavach_scans");
   };
 
+  const handleDeleteScan = async (scanId: string) => {
+    console.log("[KarnaKavach] Deleting scan:", scanId);
+    
+    // Update local state first
+    setScans(prev => prev.filter(s => s.id !== scanId));
+
+    if (isDummy) {
+      const updated = scans.filter(s => s.id !== scanId);
+      if (user) {
+        localStorage.setItem(`karnakavach_scans_${user.uid}`, JSON.stringify(updated));
+      }
+      localStorage.setItem("karnakavach_scans", JSON.stringify(updated));
+    } else {
+      try {
+        await deleteScanFromFirestore(scanId);
+      } catch (error) {
+        console.error("[KarnaKavach] Firestore delete failed:", error);
+      }
+    }
+  };
+
+  const handleReAnalyze = async (scan: Scan, engine: "ai" | "ml" | "hybrid") => {
+    console.log("[KarnaKavach] Re-analyzing scan:", scan.id, "using engine:", engine);
+    let url = "/api/hybrid-analyze";
+    if (engine === "ai") url = "/api/analyze";
+    if (engine === "ml") url = "/api/ml-analyze";
+
+    const savedSettingsStr = localStorage.getItem("karnakavach_settings");
+    let sensitivity = "Medium";
+    if (savedSettingsStr) {
+      try {
+        sensitivity = JSON.parse(savedSettingsStr).sensitivity || "Medium";
+      } catch {}
+    }
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sender: scan.sender,
+        subject: scan.subject,
+        body: scan.body,
+        replyTo: scan.replyTo || "",
+        attachments: scan.attachments || [],
+        sensitivity,
+        model: "gemini-2.5-flash"
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
+
+    const data = await response.json();
+    
+    const updatedScan: Scan = {
+      ...scan,
+      riskScore: data.riskScore ?? (data.verdict === "Phishing" ? 85 : 10),
+      riskLevel: data.riskLevel ?? (data.verdict === "Phishing" ? "HIGH" : "LOW"),
+      summary: data.summary || data.explanation || "",
+      confidence: data.confidence || 90,
+      threatVectors: data.threatVectors || [],
+      threatCategory: data.threatCategory || "General Phishing",
+      engine: engine === "ai" ? "Gemini AI" : engine === "ml" ? "Machine Learning" : "Hybrid",
+      urlAnalysis: data.urlAnalysis || data.urlAnalyses || [],
+      recommendations: data.recommendations || []
+    };
+
+    setScans(prev => prev.map(s => s.id === scan.id ? updatedScan : s));
+
+    if (!isDummy && user) {
+      await saveScanToFirestore(user.uid, updatedScan);
+    } else {
+      const updated = scans.map(s => s.id === scan.id ? updatedScan : s);
+      if (user) {
+        localStorage.setItem(`karnakavach_scans_${user.uid}`, JSON.stringify(updated));
+      }
+      localStorage.setItem("karnakavach_scans", JSON.stringify(updated));
+    }
+  };
+
   return (
     <div className="bg-background text-on-surface min-h-screen font-sans flex flex-col justify-between overflow-x-hidden relative select-none antialiased selection:bg-primary-container/20 selection:text-primary-fixed-dim">
       
@@ -396,6 +478,8 @@ export default function App() {
                           setCurrentTab("intelligence");
                         }}
                         onClearHistory={handleClearHistory}
+                        onDeleteScan={handleDeleteScan}
+                        onReAnalyze={handleReAnalyze}
                       />
                     )}
                     {currentTab === "intelligence" && <IntelligenceView scan={selectedScan || scans[0] || null} />}
