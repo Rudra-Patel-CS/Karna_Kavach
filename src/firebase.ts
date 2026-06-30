@@ -262,6 +262,12 @@ export async function loginWithGoogle(): Promise<{ user: any; error?: string }> 
     return { user: result.user };
   } catch (err: any) {
     console.error("Google Sign-In Error:", err);
+    if (err.code === "auth/unauthorized-domain") {
+      return { 
+        user: null, 
+        error: `Unauthorized Domain: Please add '${window.location.hostname}' to Firebase Console -> Authentication -> Settings -> Authorized Domains.` 
+      };
+    }
     return { user: null, error: err.message || "Failed to establish secure connection." };
   }
 }
@@ -292,6 +298,12 @@ export async function loginWithGithub(): Promise<{ user: any; error?: string }> 
     }
     if (err.code === "auth/operation-not-allowed") {
       return { user: null, error: "GitHub sign-in is not enabled yet. Enable it in Firebase Console → Authentication → Sign-in method." };
+    }
+    if (err.code === "auth/unauthorized-domain") {
+      return { 
+        user: null, 
+        error: `Unauthorized Domain: Please add '${window.location.hostname}' to Firebase Console -> Authentication -> Settings -> Authorized Domains.` 
+      };
     }
     return { user: null, error: err.message || "GitHub sign-in failed." };
   }
