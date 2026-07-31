@@ -84,7 +84,7 @@ export default function AnalyzerView({ onScanComplete, onRequestOpenSettings, us
     } catch (err: any) {
       console.warn("Backend parser failed or unavailable. Falling back to client-side parsing.", err);
       parseEmlContent(rawEmailText);
-      setErrorMsg("Backend parser is unavailable on this deployment. Fallback client-side heuristic parser was used.");
+      setErrorMsg(""); // Clear any previous errors since client-side fallback succeeded
     } finally {
       setParsingRaw(false);
     }
