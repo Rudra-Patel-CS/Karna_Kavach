@@ -24,7 +24,7 @@ export default function AnalyzerView({ onScanComplete, onRequestOpenSettings, us
           if (parsed.defaultEngine) {
             setAnalysisEngine(parsed.defaultEngine);
           }
-        } catch {}
+        } catch { }
       }
     };
     applySettings();
@@ -54,7 +54,7 @@ export default function AnalyzerView({ onScanComplete, onRequestOpenSettings, us
       setErrorMsg("Please paste some raw email text first.");
       return;
     }
-    
+
     setParsingRaw(true);
     setErrorMsg("");
     try {
@@ -63,21 +63,21 @@ export default function AnalyzerView({ onScanComplete, onRequestOpenSettings, us
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ rawText: rawEmailText })
       });
-      
+
       if (!response.ok) {
         throw new Error(await response.text());
       }
-      
+
       const data = await response.json();
       setParsedData(data);
-      
+
       // Auto-fill fields with parsed data
       setSender(data.from_email || data.from_name || "");
       setSubject(data.subject || "");
       setBody(data.body || "");
       setReplyTo(data.reply_to || "");
       setAttachments(data.attachments || []);
-      
+
       if (!data.parsed_successfully) {
         setErrorMsg("Heuristic parsing failed. Entire block treated as email body.");
       }
@@ -215,14 +215,14 @@ export default function AnalyzerView({ onScanComplete, onRequestOpenSettings, us
       let enableOcr = true;
       let language = "English";
       if (savedSettingsStr) {
-         try {
-           const parsedSettings = JSON.parse(savedSettingsStr);
-           if (parsedSettings.model) model = parsedSettings.model;
-           if (parsedSettings.sensitivity) sensitivity = parsedSettings.sensitivity;
-           if (parsedSettings.autoUrlScan !== undefined) autoUrlScan = parsedSettings.autoUrlScan;
-           if (parsedSettings.enableOcr !== undefined) enableOcr = parsedSettings.enableOcr;
-           if (parsedSettings.language) language = parsedSettings.language;
-         } catch(e) {}
+        try {
+          const parsedSettings = JSON.parse(savedSettingsStr);
+          if (parsedSettings.model) model = parsedSettings.model;
+          if (parsedSettings.sensitivity) sensitivity = parsedSettings.sensitivity;
+          if (parsedSettings.autoUrlScan !== undefined) autoUrlScan = parsedSettings.autoUrlScan;
+          if (parsedSettings.enableOcr !== undefined) enableOcr = parsedSettings.enableOcr;
+          if (parsedSettings.language) language = parsedSettings.language;
+        } catch (e) { }
       }
 
       // Drop images if OCR is disabled
@@ -259,19 +259,19 @@ export default function AnalyzerView({ onScanComplete, onRequestOpenSettings, us
 
           const hybridOutput = await response.json();
           report = {
-            riskScore:      hybridOutput.riskScore,
-            riskLevel:      hybridOutput.riskLevel,
-            summary:        hybridOutput.summary,
-            confidence:     hybridOutput.confidence,
-            threatVectors:  hybridOutput.threatVectors,
+            riskScore: hybridOutput.riskScore,
+            riskLevel: hybridOutput.riskLevel,
+            summary: hybridOutput.summary,
+            confidence: hybridOutput.confidence,
+            threatVectors: hybridOutput.threatVectors,
             threatCategory: hybridOutput.threatCategory,
             scoreBreakdown: hybridOutput.scoreBreakdown,
             recommendations: hybridOutput.recommendations,
-            emailIntel:     hybridOutput.emailIntel,
-            mlResult:       hybridOutput.mlResult,
-            ruleResult:     hybridOutput.ruleResult,
-            urlAnalysis:    hybridOutput.urlAnalyses,
-            comparison:     hybridOutput.comparison
+            emailIntel: hybridOutput.emailIntel,
+            mlResult: hybridOutput.mlResult,
+            ruleResult: hybridOutput.ruleResult,
+            urlAnalysis: hybridOutput.urlAnalyses,
+            comparison: hybridOutput.comparison
           };
         } else {
           response = await fetch("/api/ml-analyze", {
@@ -285,25 +285,25 @@ export default function AnalyzerView({ onScanComplete, onRequestOpenSettings, us
           }
 
           const mlOutput = await response.json();
-          
+
           // Map ML output to UI report format
           const riskLevel = mlOutput.verdict === "Phishing" ? "HIGH" : "LOW";
           report = {
-             riskScore: mlOutput.probability,
-             riskLevel: riskLevel,
-             summary: mlOutput.reasons.join("\n") || `The Local ML model has determined this email is ${mlOutput.verdict} with ${mlOutput.confidence}% confidence.`,
-             confidence: mlOutput.confidence,
-             threatVectors: mlOutput.reasons.length > 0 ? mlOutput.reasons.map((r:string, i:number) => ({
-                title: i===0?"Primary Keyword Driver":"Secondary Findings",
-                description: r,
-                badge: riskLevel==="HIGH" ? "Trigger" : "Clean",
-                type: riskLevel==="HIGH" ? "critical" : "success"
-             })) : [{ title: "Analyzed Text", description: "Model found no specific triggering features in the text or urls.", badge: "Clear", type: "success" }]
+            riskScore: mlOutput.probability,
+            riskLevel: riskLevel,
+            summary: mlOutput.reasons.join("\n") || `The Local ML model has determined this email is ${mlOutput.verdict} with ${mlOutput.confidence}% confidence.`,
+            confidence: mlOutput.confidence,
+            threatVectors: mlOutput.reasons.length > 0 ? mlOutput.reasons.map((r: string, i: number) => ({
+              title: i === 0 ? "Primary Keyword Driver" : "Secondary Findings",
+              description: r,
+              badge: riskLevel === "HIGH" ? "Trigger" : "Clean",
+              type: riskLevel === "HIGH" ? "critical" : "success"
+            })) : [{ title: "Analyzed Text", description: "Model found no specific triggering features in the text or urls.", badge: "Clear", type: "success" }]
           };
         }
       } catch (err: any) {
         console.warn("Backend analysis API unreachable. Running client-side sandboxed simulation fallback.", err);
-        
+
         // Simple client-side heuristic scanner fallback
         const combinedText = `${sender} ${subject} ${body}`.toLowerCase();
         const hasUrgent = combinedText.includes("urgent") || combinedText.includes("immediate") || combinedText.includes("action required") || combinedText.includes("suspended") || combinedText.includes("hold");
@@ -354,7 +354,7 @@ export default function AnalyzerView({ onScanComplete, onRequestOpenSettings, us
           urlAnalysis: hasLinks ? [{ url: "Extracted links", classification: score >= 50 ? "Suspicious" : "Clean", risk_score: score, reasons: ["Found in message body"] }] : []
         };
       }
-      
+
       const durationMs = Math.round(performance.now() - startTime);
       setAnalysisDuration(durationMs);
 
@@ -388,9 +388,9 @@ export default function AnalyzerView({ onScanComplete, onRequestOpenSettings, us
       console.error(err);
       let errorText = err.message || "Cognitive scan engine timed out. Please retry.";
       try {
-         const parsedError = JSON.parse(errorText);
-         if (parsedError.error) errorText = parsedError.error;
-      } catch(e) {}
+        const parsedError = JSON.parse(errorText);
+        if (parsedError.error) errorText = parsedError.error;
+      } catch (e) { }
       setErrorMsg(errorText);
     } finally {
       setAnalyzing(false);
@@ -399,62 +399,62 @@ export default function AnalyzerView({ onScanComplete, onRequestOpenSettings, us
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 w-full">
-      
+
       {/* Input panel block - Left col */}
       <div className="xl:col-span-5 flex flex-col gap-6">
 
         {/* Engine Selection Block */}
         <div className="glass-panel items-center justify-between flex rounded-3xl p-4 px-6 border border-neutral-800">
-           <div>
-              <h3 className="font-display font-black text-xs uppercase tracking-widest text-[#7df4ff]">Analysis Engine</h3>
-              <p className="font-mono text-[10px] text-outline-variant pt-1 uppercase">Select detection model</p>
-           </div>
-           <div className="flex bg-surface-container-high rounded-lg p-1 border border-outline-variant/30 gap-1">
-              <button 
-                type="button" 
-                onClick={() => setAnalysisEngine("hybrid")} 
-                className={`text-[10px] uppercase font-bold tracking-wider px-3 py-1.5 rounded-md transition-all flex items-center gap-1 ${analysisEngine === "hybrid" ? "bg-gradient-to-r from-indigo-500 to-primary-fixed-dim text-background shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
-              >
-                <Layers className="w-3 h-3" />
-                Hybrid
-              </button>
-              <button 
-                type="button" 
-                onClick={() => setAnalysisEngine("ai")} 
-                className={`text-[10px] uppercase font-bold tracking-wider px-3 py-1.5 rounded-md transition-all ${analysisEngine === "ai" ? "bg-primary-fixed-dim text-background shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
-              >
-                AI
-              </button>
-              <button 
-                type="button" 
-                onClick={() => setAnalysisEngine("ml")} 
-                className={`text-[10px] uppercase font-bold tracking-wider px-3 py-1.5 rounded-md transition-all ${analysisEngine === "ml" ? "bg-indigo-500 text-background shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
-              >
-                ML
-              </button>
-           </div>
+          <div>
+            <h3 className="font-display font-black text-xs uppercase tracking-widest text-[#7df4ff]">Analysis Engine</h3>
+            <p className="font-mono text-[10px] text-outline-variant pt-1 uppercase">Select detection model</p>
+          </div>
+          <div className="flex bg-surface-container-high rounded-lg p-1 border border-outline-variant/30 gap-1">
+            <button
+              type="button"
+              onClick={() => setAnalysisEngine("hybrid")}
+              className={`text-[10px] uppercase font-bold tracking-wider px-3 py-1.5 rounded-md transition-all flex items-center gap-1 ${analysisEngine === "hybrid" ? "bg-gradient-to-r from-indigo-500 to-primary-fixed-dim text-background shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+            >
+              <Layers className="w-3 h-3" />
+              Hybrid
+            </button>
+            <button
+              type="button"
+              onClick={() => setAnalysisEngine("ai")}
+              className={`text-[10px] uppercase font-bold tracking-wider px-3 py-1.5 rounded-md transition-all ${analysisEngine === "ai" ? "bg-primary-fixed-dim text-background shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+            >
+              AI
+            </button>
+            <button
+              type="button"
+              onClick={() => setAnalysisEngine("ml")}
+              className={`text-[10px] uppercase font-bold tracking-wider px-3 py-1.5 rounded-md transition-all ${analysisEngine === "ml" ? "bg-indigo-500 text-background shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+            >
+              ML
+            </button>
+          </div>
         </div>
-        
+
         {/* Detailed Form or Raw Paste Form */}
         <div className="glass-panel rounded-3xl p-6 flex flex-col gap-5 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary-fixed-dim/55 to-transparent opacity-50" />
-          
+
           <div className="flex items-center justify-between mb-2">
             <h2 className="font-display font-black text-xs uppercase tracking-widest text-[#7df4ff] flex items-center gap-2">
               <Mail className="w-4 h-4 text-primary-fixed-dim" />
               Source Data Entry
             </h2>
             <div className="flex bg-surface-container-high rounded-full p-1 border border-outline-variant/30">
-              <button 
-                type="button" 
-                onClick={() => setInputMode("fields")} 
+              <button
+                type="button"
+                onClick={() => setInputMode("fields")}
                 className={`text-[10px] uppercase font-bold tracking-wider px-3 py-1 rounded-full transition-all ${inputMode === "fields" ? "bg-primary-fixed-dim text-background shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
               >
                 Structured
               </button>
-              <button 
-                type="button" 
-                onClick={() => setInputMode("raw")} 
+              <button
+                type="button"
+                onClick={() => setInputMode("raw")}
                 className={`text-[10px] uppercase font-bold tracking-wider px-3 py-1 rounded-full transition-all flex items-center gap-1 ${inputMode === "raw" ? "bg-primary-fixed-dim text-background shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
               >
                 Paste Raw
@@ -463,7 +463,7 @@ export default function AnalyzerView({ onScanComplete, onRequestOpenSettings, us
           </div>
 
           <div className="space-y-4">
-            
+
             {inputMode === "fields" ? (
               <>
                 {/* Sender Address */}
@@ -582,7 +582,7 @@ export default function AnalyzerView({ onScanComplete, onRequestOpenSettings, us
                     className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg px-4 py-3 text-xs text-on-surface font-mono placeholder:text-outline-variant/40 focus:outline-none focus:border-primary-fixed-dim focus:ring-1 focus:ring-primary-fixed-dim/30 transition-all h-64 resize-none"
                   />
                 </div>
-                
+
                 <button
                   type="button"
                   onClick={handleParseRawText}
@@ -644,17 +644,16 @@ export default function AnalyzerView({ onScanComplete, onRequestOpenSettings, us
         </div>
 
         {/* Drag & Drop area */}
-        <div 
+        <div
           onDragEnter={handleDrag}
           onDragOver={handleDrag}
           onDragLeave={handleDrag}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className={`glass-panel rounded-3xl p-6 border-dashed border-2 transition-all duration-300 flex flex-col items-center justify-center text-center gap-3 cursor-pointer group ${
-            dragActive 
-              ? "border-primary-fixed-dim bg-primary-container/5 scale-[1.01]" 
-              : "bg-surface-container/10 border-neutral-800 hover:border-indigo-500/40 hover:bg-neutral-900/40"
-          }`}
+          className={`glass-panel rounded-3xl p-6 border-dashed border-2 transition-all duration-300 flex flex-col items-center justify-center text-center gap-3 cursor-pointer group ${dragActive
+            ? "border-primary-fixed-dim bg-primary-container/5 scale-[1.01]"
+            : "bg-surface-container/10 border-neutral-800 hover:border-indigo-500/40 hover:bg-neutral-900/40"
+            }`}
         >
           <input
             type="file"
@@ -679,8 +678,8 @@ export default function AnalyzerView({ onScanComplete, onRequestOpenSettings, us
         {/* Image Preview */}
         {imagePayloads.length > 0 && (
           <div className="glass-panel p-4 rounded-3xl border border-neutral-800 relative">
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={() => setImagePayloads([])}
               className="absolute top-2 right-2 w-6 h-6 bg-surface-dim rounded-full flex items-center justify-center border border-outline-variant/20 hover:bg-error-container hover:text-error transition-colors z-10"
               title="Clear all"
@@ -694,8 +693,8 @@ export default function AnalyzerView({ onScanComplete, onRequestOpenSettings, us
             <div className="flex gap-3 overflow-x-auto pb-2">
               {imagePayloads.map((payload, idx) => (
                 <div key={idx} className="relative rounded-xl overflow-hidden border border-outline-variant/10 bg-surface-container-lowest shrink-0 max-h-48 group">
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={() => setImagePayloads(prev => prev.filter((_, i) => i !== idx))}
                     className="absolute top-1 right-1 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center border border-white/20 text-white/80 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-error-container hover:border-error hover:text-error"
                     title="Remove image"
@@ -801,18 +800,17 @@ export default function AnalyzerView({ onScanComplete, onRequestOpenSettings, us
               exit={{ opacity: 0, x: -20 }}
               className="space-y-6 flex-1"
             >
-              
+
               {/* Score card + Explanation card */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
+
                 {/* Score donut card */}
-                <div className={`glass-panel rounded-3xl p-6 flex flex-col items-center justify-center relative overflow-hidden ${
-                  results!.riskScore >= 70 ? "border border-error/50" : "border border-neutral-800"
-                }`}>
+                <div className={`glass-panel rounded-3xl p-6 flex flex-col items-center justify-center relative overflow-hidden ${results!.riskScore >= 70 ? "border border-error/50" : "border border-neutral-800"
+                  }`}>
                   <div className="absolute top-4 right-4 p-1">
                     <ShieldAlert className={`w-5 h-5 ${results!.riskScore >= 70 ? "text-error" : "text-indigo-400"}`} />
                   </div>
-                  
+
                   <h3 className="font-display font-black text-[10px] text-neutral-400 uppercase tracking-widest self-start mb-4">
                     Cognitive Threat Score
                   </h3>
@@ -821,13 +819,13 @@ export default function AnalyzerView({ onScanComplete, onRequestOpenSettings, us
                   <div className="relative w-44 h-44 flex items-center justify-center">
                     <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                       <circle cx="50" cy="50" r="42" fill="none" stroke="#122131" strokeWidth="6" />
-                      <circle 
-                        cx="50" 
-                        cy="50" 
-                        r="42" 
-                        fill="none" 
-                        stroke={results!.riskScore >= 70 ? "#ffb4ab" : "#00dbe9"} 
-                        strokeWidth="6" 
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="42"
+                        fill="none"
+                        stroke={results!.riskScore >= 70 ? "#ffb4ab" : "#00dbe9"}
+                        strokeWidth="6"
                         strokeDasharray={263.89}
                         strokeDashoffset={263.89 - (263.89 * results!.riskScore) / 100}
                         strokeLinecap="round"
@@ -836,9 +834,8 @@ export default function AnalyzerView({ onScanComplete, onRequestOpenSettings, us
                     </svg>
 
                     <div className="absolute flex flex-col items-center justify-center text-center">
-                      <span className={`font-display text-4xl font-extrabold tracking-tight ${
-                        results!.riskScore >= 70 ? "text-error drop-shadow-[0_0_10px_rgba(255,180,171,0.45)]" : "text-primary-fixed-dim drop-shadow-[0_0_10px_rgba(0,219,233,0.4)]"
-                      }`}>
+                      <span className={`font-display text-4xl font-extrabold tracking-tight ${results!.riskScore >= 70 ? "text-error drop-shadow-[0_0_10px_rgba(255,180,171,0.45)]" : "text-primary-fixed-dim drop-shadow-[0_0_10px_rgba(0,219,233,0.4)]"
+                        }`}>
                         {results!.riskScore}
                       </span>
                       <span className="font-mono text-[10px] text-outline mt-[-4px]">/100</span>
@@ -846,16 +843,14 @@ export default function AnalyzerView({ onScanComplete, onRequestOpenSettings, us
                   </div>
 
                   {/* High Threat Tag Badge */}
-                  <div className={`mt-5 px-4 py-1 rounded-full border flex items-center gap-2 ${
-                    results!.riskScore >= 70 
-                      ? "bg-error-container/20 border-error/30 text-error shadow-[0_0_15px_rgba(255,180,171,0.1)]" 
-                      : results!.riskScore >= 35
+                  <div className={`mt-5 px-4 py-1 rounded-full border flex items-center gap-2 ${results!.riskScore >= 70
+                    ? "bg-error-container/20 border-error/30 text-error shadow-[0_0_15px_rgba(255,180,171,0.1)]"
+                    : results!.riskScore >= 35
                       ? "bg-secondary-container/20 border-secondary/30 text-secondary"
                       : "bg-primary-container/5 border-primary-fixed-dim/20 text-primary-fixed-dim"
-                  }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${
-                      results!.riskScore >= 70 ? "bg-error" : results!.riskScore >= 35 ? "bg-secondary" : "bg-primary-fixed-dim"
-                    }`} />
+                    }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${results!.riskScore >= 70 ? "bg-error" : results!.riskScore >= 35 ? "bg-secondary" : "bg-primary-fixed-dim"
+                      }`} />
                     <span className="font-display font-extrabold text-[9px] tracking-widest uppercase">
                       {results!.riskScore >= 70 ? "CRITICAL PHISHING DETECTED" : results!.riskScore >= 35 ? "SUSPICIOUS THREAT SUSPECT" : "PROVABLY SECURE BASELINE"}
                     </span>
@@ -866,7 +861,7 @@ export default function AnalyzerView({ onScanComplete, onRequestOpenSettings, us
                 {/* AI Explanation Summary */}
                 <div className="glass-panel rounded-3xl p-6 flex flex-col relative justify-between overflow-hidden">
                   <div className="absolute top-0 right-0 w-20 h-20 bg-indigo-500/5 blur-2xl rounded-full" />
-                  
+
                   <div>
                     <h3 className="font-display font-black text-[10px] text-neutral-400 uppercase tracking-widest flex items-center justify-between gap-2 mb-4">
                       <span className="flex items-center gap-2">
@@ -874,12 +869,12 @@ export default function AnalyzerView({ onScanComplete, onRequestOpenSettings, us
                         SYNTHETIC INTELLIGENCE SUMMARY
                       </span>
                       {results!.engine && (
-                         <span className={`px-2 py-0.5 rounded font-bold border ${results!.engine === "Gemini AI" ? "bg-primary-container/10 border-primary-fixed-dim text-primary-fixed-dim" : "bg-indigo-500/20 border-indigo-500/50 text-indigo-400"}`}>
-                           {results!.engine}
-                         </span>
+                        <span className={`px-2 py-0.5 rounded font-bold border ${results!.engine === "Gemini AI" ? "bg-primary-container/10 border-primary-fixed-dim text-primary-fixed-dim" : "bg-indigo-500/20 border-indigo-500/50 text-indigo-400"}`}>
+                          {results!.engine}
+                        </span>
                       )}
                     </h3>
-                    
+
                     <p className="font-sans text-xs text-on-surface leading-relaxed whitespace-pre-line max-h-56 overflow-y-auto pr-1">
                       {results!.summary}
                     </p>
@@ -890,10 +885,10 @@ export default function AnalyzerView({ onScanComplete, onRequestOpenSettings, us
                     <span className="text-primary-fixed-dim font-bold">{results!.confidence}%</span>
                   </div>
                   {analysisDuration && (
-                     <div className="mt-1 flex justify-between items-center font-mono text-[10px]">
-                        <span className="text-outline uppercase tracking-wider">Analysis Duration</span>
-                        <span className="text-neutral-400 font-bold">{analysisDuration}ms</span>
-                     </div>
+                    <div className="mt-1 flex justify-between items-center font-mono text-[10px]">
+                      <span className="text-outline uppercase tracking-wider">Analysis Duration</span>
+                      <span className="text-neutral-400 font-bold">{analysisDuration}ms</span>
+                    </div>
                   )}
 
                 </div>
@@ -913,18 +908,17 @@ export default function AnalyzerView({ onScanComplete, onRequestOpenSettings, us
                     const isWarning = vector.type === "warning" || vector.type === "critical";
 
                     return (
-                      <div 
-                        key={index} 
+                      <div
+                        key={index}
                         className="bg-surface-container-lowest/40 border border-outline-variant/15 rounded-lg p-4 flex flex-col md:flex-row gap-4 md:items-center justify-between"
                       >
                         <div className="flex items-start md:items-center gap-4">
-                          <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center border ${
-                            isCritical 
-                              ? "bg-error-container/10 border-error/30 text-error" 
-                              : isWarning 
-                              ? "bg-secondary-container/10 border-secondary/35 text-secondary" 
+                          <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center border ${isCritical
+                            ? "bg-error-container/10 border-error/30 text-error"
+                            : isWarning
+                              ? "bg-secondary-container/10 border-secondary/35 text-secondary"
                               : "bg-primary-container/5 border-primary-fixed-dim/20 text-primary-fixed-dim"
-                          }`}>
+                            }`}>
                             {isCritical ? (
                               <ShieldAlert className="w-5 h-5" />
                             ) : (
@@ -940,13 +934,12 @@ export default function AnalyzerView({ onScanComplete, onRequestOpenSettings, us
                         </div>
 
                         <div className="flex-shrink-0 self-end md:self-center">
-                          <span className={`px-2.5 py-1 rounded font-mono text-[10px] uppercase font-bold border ${
-                            isCritical
-                              ? "bg-error/15 border-error/25 text-error"
-                              : isWarning
+                          <span className={`px-2.5 py-1 rounded font-mono text-[10px] uppercase font-bold border ${isCritical
+                            ? "bg-error/15 border-error/25 text-error"
+                            : isWarning
                               ? "bg-secondary-container/20 border-secondary/30 text-secondary"
                               : "bg-surface-dim border-outline-variant text-outline"
-                          }`}>
+                            }`}>
                             {vector.badge}
                           </span>
                         </div>
@@ -987,26 +980,26 @@ export default function AnalyzerView({ onScanComplete, onRequestOpenSettings, us
 function HybridResultExtras({ scan }: { scan: import("../types").Scan }) {
   const [showRules, setShowRules] = React.useState(false);
 
-  const sb    = scan.scoreBreakdown;
-  const ml    = scan.mlResult;
-  const rule  = scan.ruleResult;
-  const recs  = scan.recommendations ?? [];
-  const cat   = scan.threatCategory ?? "General Phishing";
+  const sb = scan.scoreBreakdown;
+  const ml = scan.mlResult;
+  const rule = scan.ruleResult;
+  const recs = scan.recommendations ?? [];
+  const cat = scan.threatCategory ?? "General Phishing";
   const intel = scan.emailIntel ?? {};
-  const urls  = scan.urlAnalysis ?? [];
+  const urls = scan.urlAnalysis ?? [];
   const comparison = scan.comparison;
   const attachments = scan.attachments ?? [];
 
   const catStyles: Record<string, string> = {
-    "Credential Theft":           "text-rose-400 border-rose-500/35 bg-rose-500/10 shadow-[0_0_10px_rgba(244,63,94,0.15)]",
-    "Business Email Compromise":  "text-pink-400 border-pink-500/35 bg-pink-500/10 shadow-[0_0_10px_rgba(236,72,153,0.15)]",
-    "Bank Scam":                  "text-amber-400 border-amber-500/35 bg-amber-500/10 shadow-[0_0_10px_rgba(245,158,11,0.15)]",
-    "Delivery Scam":              "text-purple-400 border-purple-500/35 bg-purple-500/10 shadow-[0_0_10px_rgba(168,85,247,0.15)]",
-    "Lottery Scam":               "text-yellow-400 border-yellow-500/35 bg-yellow-500/10 shadow-[0_0_10px_rgba(234,179,8,0.15)]",
-    "Invoice Scam":               "text-orange-400 border-orange-500/35 bg-orange-500/10 shadow-[0_0_10px_rgba(249,115,22,0.15)]",
-    "Crypto Scam":                "text-cyan-400 border-cyan-500/35 bg-cyan-500/10 shadow-[0_0_10px_rgba(6,182,212,0.15)]",
-    "Technical Support Scam":     "text-red-400 border-red-500/35 bg-red-500/10 shadow-[0_0_10px_rgba(239,68,68,0.15)]",
-    "General Phishing":           "text-primary-fixed-dim border-primary-fixed-dim/30 bg-primary-container/10 shadow-[0_0_10px_rgba(0,219,233,0.15)]",
+    "Credential Theft": "text-rose-400 border-rose-500/35 bg-rose-500/10 shadow-[0_0_10px_rgba(244,63,94,0.15)]",
+    "Business Email Compromise": "text-pink-400 border-pink-500/35 bg-pink-500/10 shadow-[0_0_10px_rgba(236,72,153,0.15)]",
+    "Bank Scam": "text-amber-400 border-amber-500/35 bg-amber-500/10 shadow-[0_0_10px_rgba(245,158,11,0.15)]",
+    "Delivery Scam": "text-purple-400 border-purple-500/35 bg-purple-500/10 shadow-[0_0_10px_rgba(168,85,247,0.15)]",
+    "Lottery Scam": "text-yellow-400 border-yellow-500/35 bg-yellow-500/10 shadow-[0_0_10px_rgba(234,179,8,0.15)]",
+    "Invoice Scam": "text-orange-400 border-orange-500/35 bg-orange-500/10 shadow-[0_0_10px_rgba(249,115,22,0.15)]",
+    "Crypto Scam": "text-cyan-400 border-cyan-500/35 bg-cyan-500/10 shadow-[0_0_10px_rgba(6,182,212,0.15)]",
+    "Technical Support Scam": "text-red-400 border-red-500/35 bg-red-500/10 shadow-[0_0_10px_rgba(239,68,68,0.15)]",
+    "General Phishing": "text-primary-fixed-dim border-primary-fixed-dim/30 bg-primary-container/10 shadow-[0_0_10px_rgba(0,219,233,0.15)]",
   };
   const catClass = catStyles[cat] ?? catStyles["General Phishing"];
 
@@ -1061,9 +1054,9 @@ function HybridResultExtras({ scan }: { scan: import("../types").Scan }) {
             </h3>
             <div className="space-y-3 flex-1 justify-center flex flex-col">
               {[
-                { label: "Rule Heuristics", score: sb.rule,     weight: sb.weights.rule, color: "bg-amber-500", glow: "shadow-[0_0_10px_rgba(245,158,11,0.5)]" },
-                { label: "ML Classification",    score: sb.ml,       weight: sb.weights.ml,   color: "bg-indigo-500", glow: "shadow-[0_0_10px_rgba(99,102,241,0.5)]" },
-                { label: "Gemini AI Core",   score: sb.ai ?? 0,  weight: sb.weights.ai,   color: "bg-primary-fixed-dim", na: sb.ai === null, glow: "shadow-[0_0_10px_rgba(0,219,233,0.5)]" },
+                { label: "Rule Heuristics", score: sb.rule, weight: sb.weights.rule, color: "bg-amber-500", glow: "shadow-[0_0_10px_rgba(245,158,11,0.5)]" },
+                { label: "ML Classification", score: sb.ml, weight: sb.weights.ml, color: "bg-indigo-500", glow: "shadow-[0_0_10px_rgba(99,102,241,0.5)]" },
+                { label: "Gemini AI Core", score: sb.ai ?? 0, weight: sb.weights.ai, color: "bg-primary-fixed-dim", na: sb.ai === null, glow: "shadow-[0_0_10px_rgba(0,219,233,0.5)]" },
               ].map(({ label, score, weight, color, na, glow }) => (
                 <div key={label}>
                   <div className="flex justify-between text-[11px] font-mono mb-1.5">
@@ -1092,11 +1085,10 @@ function HybridResultExtras({ scan }: { scan: import("../types").Scan }) {
               <Cpu className="w-4 h-4 text-primary-fixed-dim" />
               AI vs ML Engine Duel Matrix
             </h3>
-            <span className={`px-3 py-1 rounded-full font-mono text-[9px] uppercase font-black border tracking-wider self-start sm:self-center ${
-              compAgree
-                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-                : "bg-amber-500/10 border-amber-500/30 text-amber-400"
-            }`}>
+            <span className={`px-3 py-1 rounded-full font-mono text-[9px] uppercase font-black border tracking-wider self-start sm:self-center ${compAgree
+              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+              : "bg-amber-500/10 border-amber-500/30 text-amber-400"
+              }`}>
               {compAgree ? "ENGINES IN AGREEMENT" : "ENGINE DISCREPANCY DETECTED"}
             </span>
           </div>
@@ -1181,13 +1173,12 @@ function HybridResultExtras({ scan }: { scan: import("../types").Scan }) {
             ].map(({ label, value, highlight, isCode }) => (
               <div key={label} className="bg-surface-container-lowest/30 border border-outline-variant/10 rounded-xl p-3 flex flex-col gap-1">
                 <span className="text-outline text-[9px] uppercase tracking-wider">{label}</span>
-                <span className={`text-xs font-mono font-bold truncate block ${
-                  highlight 
-                    ? "text-rose-400" 
-                    : isCode 
-                    ? "text-indigo-400" 
+                <span className={`text-xs font-mono font-bold truncate block ${highlight
+                  ? "text-rose-400"
+                  : isCode
+                    ? "text-indigo-400"
                     : "text-on-surface"
-                }`}>
+                  }`}>
                   {value}
                 </span>
               </div>
@@ -1197,21 +1188,18 @@ function HybridResultExtras({ scan }: { scan: import("../types").Scan }) {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-outline-variant/15 pt-4">
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/15">
               <span className="text-[10px] text-outline uppercase tracking-wider font-bold">Sender Trust:</span>
-              <span className={`font-mono text-xs font-black uppercase ${
-                intel.sender_trust === "High" ? "text-emerald-400" : intel.sender_trust === "Medium" ? "text-amber-400" : "text-rose-400"
-              }`}>{intel.sender_trust || "Medium"}</span>
+              <span className={`font-mono text-xs font-black uppercase ${intel.sender_trust === "High" ? "text-emerald-400" : intel.sender_trust === "Medium" ? "text-amber-400" : "text-rose-400"
+                }`}>{intel.sender_trust || "Medium"}</span>
             </div>
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/15">
               <span className="text-[10px] text-outline uppercase tracking-wider font-bold">Subject Threat:</span>
-              <span className={`font-mono text-xs font-black uppercase ${
-                intel.subject_risk === "High" ? "text-rose-400" : intel.subject_risk === "Medium" ? "text-amber-400" : "text-emerald-400"
-              }`}>{intel.subject_risk || "Low"}</span>
+              <span className={`font-mono text-xs font-black uppercase ${intel.subject_risk === "High" ? "text-rose-400" : intel.subject_risk === "Medium" ? "text-amber-400" : "text-emerald-400"
+                }`}>{intel.subject_risk || "Low"}</span>
             </div>
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/15">
               <span className="text-[10px] text-outline uppercase tracking-wider font-bold">Body Threat:</span>
-              <span className={`font-mono text-xs font-black uppercase ${
-                intel.body_risk === "High" ? "text-rose-400" : intel.body_risk === "Medium" ? "text-amber-400" : "text-emerald-400"
-              }`}>{intel.body_risk || "Low"}</span>
+              <span className={`font-mono text-xs font-black uppercase ${intel.body_risk === "High" ? "text-rose-400" : intel.body_risk === "Medium" ? "text-amber-400" : "text-emerald-400"
+                }`}>{intel.body_risk || "Low"}</span>
             </div>
           </div>
         </div>
@@ -1240,7 +1228,7 @@ function HybridResultExtras({ scan }: { scan: import("../types").Scan }) {
                 {urls.map((u: any, idx: number) => {
                   const isHigh = u.risk_score >= 70;
                   const isSusp = u.risk_score >= 40 && u.risk_score < 70;
-                  
+
                   return (
                     <tr key={idx} className="hover:bg-surface-container-low/40 transition-colors">
                       <td className="py-3 pr-2 font-mono text-[10px] text-indigo-400 max-w-[150px] truncate" title={u.url}>
@@ -1249,11 +1237,10 @@ function HybridResultExtras({ scan }: { scan: import("../types").Scan }) {
                       <td className="py-3 px-2 text-on-surface truncate max-w-[120px]">{u.domain || "N/A"}</td>
                       <td className="py-3 px-2 text-outline-variant truncate max-w-[100px]">{u.subdomain || "none"}</td>
                       <td className="py-3 px-2">
-                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${
-                          u.https 
-                            ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-400" 
-                            : "bg-rose-500/10 border-rose-500/25 text-rose-400"
-                        }`}>
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${u.https
+                          ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-400"
+                          : "bg-rose-500/10 border-rose-500/25 text-rose-400"
+                          }`}>
                           {u.https ? "HTTPS Secure" : "HTTP Unsafe"}
                         </span>
                       </td>
@@ -1261,9 +1248,8 @@ function HybridResultExtras({ scan }: { scan: import("../types").Scan }) {
                         {u.ip ? `${u.ip}:${u.port}` : `dns:${u.port}`}
                       </td>
                       <td className="py-3 px-2 text-right">
-                        <span className={`font-black ${
-                          isHigh ? "text-error" : isSusp ? "text-amber-400" : "text-emerald-400"
-                        }`}>
+                        <span className={`font-black ${isHigh ? "text-error" : isSusp ? "text-amber-400" : "text-emerald-400"
+                          }`}>
                           {u.risk_score}%
                         </span>
                       </td>
@@ -1289,18 +1275,18 @@ function HybridResultExtras({ scan }: { scan: import("../types").Scan }) {
               const ext = filename.split('.').pop() || '';
               const dangerous_exts = ["exe", "scr", "bat", "vbs", "js", "lnk", "docm", "xlsm", "msi", "ps1", "cab"];
               const archive_exts = ["zip", "rar", "7z", "tar", "gz"];
-              
+
               let risk = "Low Risk";
               let badgeStyle = "bg-emerald-500/10 border-emerald-500/25 text-emerald-400";
-              
+
               if (dangerous_exts.includes(ext)) {
                 risk = "Critical Malware Risk";
                 badgeStyle = "bg-rose-500/15 border-rose-500/35 text-rose-400 animate-pulse";
               } else if (archive_exts.includes(ext)) {
                 risk = "Suspicious Zip Archive";
                 badgeStyle = "bg-amber-500/15 border-amber-500/30 text-amber-400";
-              } else if (["pdf", "docx", "xlsx", "html"].includes(ext) && 
-                         (filename.includes("invoice") || filename.includes("receipt") || filename.includes("bill") || filename.includes("payment"))) {
+              } else if (["pdf", "docx", "xlsx", "html"].includes(ext) &&
+                (filename.includes("invoice") || filename.includes("receipt") || filename.includes("bill") || filename.includes("payment"))) {
                 risk = "Suspicious Invoice spoof";
                 badgeStyle = "bg-rose-500/10 border-rose-500/25 text-rose-400";
               }
@@ -1364,18 +1350,16 @@ function HybridResultExtras({ scan }: { scan: import("../types").Scan }) {
           {showRules && (
             <div className="px-6 pb-6 flex flex-col gap-3">
               {rule.triggered.map((r: any, i: number) => (
-                <div key={i} className={`flex items-start gap-4 p-4 rounded-xl border text-xs leading-relaxed ${
-                  r.severity === "critical" ? "border-rose-500/25 bg-rose-500/5 text-rose-200"
-                  : r.severity === "high"   ? "border-amber-500/25 bg-amber-500/5 text-amber-200"
-                  : r.severity === "medium" ? "border-yellow-500/25 bg-yellow-500/5 text-yellow-200"
-                  : "border-outline-variant/15 bg-surface-container-low/20 text-neutral-200"
-                }`}>
-                  <span className={`font-mono font-black shrink-0 uppercase text-[9px] mt-0.5 px-2 py-0.5 rounded border tracking-wider ${
-                    r.severity === "critical" ? "border-rose-500/50 text-rose-400"
-                    : r.severity === "high"   ? "border-amber-500/50 text-amber-400"
-                    : r.severity === "medium" ? "border-yellow-500/50 text-yellow-400"
-                    : "border-outline-variant text-outline-variant"
-                  }`}>{r.severity}</span>
+                <div key={i} className={`flex items-start gap-4 p-4 rounded-xl border text-xs leading-relaxed ${r.severity === "critical" ? "border-rose-500/25 bg-rose-500/5 text-rose-200"
+                  : r.severity === "high" ? "border-amber-500/25 bg-amber-500/5 text-amber-200"
+                    : r.severity === "medium" ? "border-yellow-500/25 bg-yellow-500/5 text-yellow-200"
+                      : "border-outline-variant/15 bg-surface-container-low/20 text-neutral-200"
+                  }`}>
+                  <span className={`font-mono font-black shrink-0 uppercase text-[9px] mt-0.5 px-2 py-0.5 rounded border tracking-wider ${r.severity === "critical" ? "border-rose-500/50 text-rose-400"
+                    : r.severity === "high" ? "border-amber-500/50 text-amber-400"
+                      : r.severity === "medium" ? "border-yellow-500/50 text-yellow-400"
+                        : "border-outline-variant text-outline-variant"
+                    }`}>{r.severity}</span>
                   <div>
                     <p className="font-display font-black text-[10px] uppercase tracking-wider text-on-surface">{r.rule.replace(/_/g, " ")}</p>
                     <p className="text-on-surface-variant mt-1">{r.description}</p>
@@ -1390,3 +1374,6 @@ function HybridResultExtras({ scan }: { scan: import("../types").Scan }) {
     </div>
   );
 }
+
+
+// For only edit...add some more feature fix the parsing
