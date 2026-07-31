@@ -10,6 +10,11 @@ import dotenv from "dotenv";
 dotenv.config({ path: ".env.local" });
 dotenv.config();
 
+// Force spawned Python subprocesses to use UTF-8 encoding (resolves CP1252/surrogate crashes on Windows)
+process.env.PYTHONIOENCODING = "utf-8";
+process.env.PYTHONUTF8 = "1";
+
+
 const app = express();
 app.use(express.json({ limit: "50mb" }));
 

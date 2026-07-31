@@ -482,7 +482,7 @@ export default function App() {
                         onReAnalyze={handleReAnalyze}
                       />
                     )}
-                    {currentTab === "intelligence" && <IntelligenceView scan={selectedScan || scans[0] || null} />}
+                    {currentTab === "intelligence" && <IntelligenceView scan={selectedScan || scans[0] || null} user={user} />}
                     {currentTab === "settings" && (
                       <SettingsView user={user} hasApiKey={hasApiKey} />
                     )}

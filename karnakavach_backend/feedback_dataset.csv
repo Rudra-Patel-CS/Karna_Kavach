@@ -140,3 +140,68 @@ https://myaccount.google.com/notifications
 You received this email to let you know about important changes to your Google Account and services.
 Ã‚Â© 2026 Google LLC, 1600 Amphitheatre Parkway, Mountain View, CA 94043, USA",https://myaccount.google.com/notifications,Legitimate,Legitimate,70,True,2026-06-30T07:26:19.476002Z,user_ui
 471d2f7f27d96167,admin-update-portal@secure-micosoft-login.com,[URGENT] Security Alert: Your Microsoft 365 Account Has Been Suspended,Plaintext Payload Block,,Phishing,Phishing,65,True,2026-06-30T07:39:04.441031Z,user_ui
+b789b384041e93dd,no-reply@leetcode.com,Recent changes to your LeetCode account,"**PLEASE DO NOT REPLY TO THIS EMAIL. IT IS NOT MONITORED**
+Dear Rudra Patel,
+Your phone number linked to your LeetCode account has been successfully updated to
++91 704****201
+We're sending this notice to ensure the security of your LeetCode account. If you made this change, no further action is necessary.
+If you did not make this change or believe your account has been accessed by an unauthorized person, please contact LeetCode Support Team.
+Sincerely,
+The LeetCode Team
+Copyright Ã‚Â© 2026 LeetCode
+If you'd like to stop receiving emails, you can unsubscribe.",,Legitimate,Legitimate,92.5,True,2026-07-03T17:39:49.356660Z,user_ui
+c3db97924a363e17,noreply@mail.app.supabase.io,Confirm your email address,"Confirm your email address
+Follow the link below to confirm this email address and finish signing up.
+Confirm email address
+You're receiving this email because you signed up for an application powered by Supabase ⚡️
+Opt out of these emails",,Legitimate,Legitimate,55,True,2026-07-03T18:33:32.637381Z,user_ui
+0b375d3eb142e614,onlinecourses@nptel.iitm.ac.in,NPTEL: Exam Registration is open now for July 2026 courses!,"to noc26-cs52-announce
+Dear Candidate,
+Here is a golden opportunity for those who had previously enrolled in this course during the January 2026 semester, but could not participate in the exams or were absent/did not pass the exam for this course. This course is being reoffered in July 2026 and we are giving you another chance to write the exam in October 24, 2026 and obtain a certificate based on NPTEL norms. Do not let go of this unique opportunity to earn a certificate from the IITs/IISc.
+IMPORTANT instructions for learners - Please read this carefully
+1. The exam date for this course: October 24, 2026
+2. CLICK HERE to register for the exam.
+Please fill the exam form using the same Enrolled email id & make fee payment via the form, as before.
+3. Choose from the Cities where exam will be conducted: Exam Cities
+4. You DO NOT have to re-enroll in the courses.
+5. You DO NOT have to resubmit Assignments OR participate in the non-proctored programming exams(if applicable) in the previous semester
+6. If you do enroll in the July 2026 course, we will take the best average assignment scores/non-proctored programming exam(if applicable) score across the two semesters.
+NOTE:
+Please check once if you have >= 40/100  in average assignment score and also participated and satisfied the criteria in the non-proctored programming exams(if applicable) that were conducted in January 2026 to become eligible for the e-certificate, wherever applicable.
+If not, please submit assignments again in the July 2026 course and also participate in the non-proctored programming exams(if applicable) to become eligible for the e-certificate.
+We will not be having new assignments or unproctored exams(if applicable) in the previous semester's (January 2026) course.
+RECOMMENDATION: If you want to take new assignments and an unproctored exam(if applicable) or brush up on your lessons for the exam, please enroll in the July 2026 course.
+Click here to enroll in the current course, links are provided corresponding to the course name.
+7. Exam fees:
+If you register for the exam and pay before August 10, 2026 - 5:00 PM, Exam fees will be Rs. 1000/- per exam.
+8. 50% fee waiver for the following categories:
+Students belonging to the SC/ST category: please select Yes for the SC/ST option and upload the correct Community certificate.
+Students belonging to the PwD category with more than 40% disability: please select Yes for the option and upload the relevant Disability certificate.
+9. Last date for exam registration: August 14, 2026 - 5:00 PM (Friday).
+10. Between August 10, 2026 - 5:00 PM & August 14, 2026 - 5:00 PM late fee will be applicable.
+11. Mode of payment: Online payment - debit card/credit card/net banking/UPI.
+12. HALL TICKET:
+The hall ticket will be available for download tentatively by 2 weeks prior to the exam date. We will confirm the same through an announcement once it is published.
+13. FOR CANDIDATES WHO WOULD LIKE TO WRITE MORE THAN 1 COURSE EXAM:- you can add or delete courses and pay separately – till the date when the exam form closes. Same day of exam – you can write exams for 2 courses in the 2 sessions. Same exam center will be allocated for both the sessions.
+14. Data changes:
+Last date for data changes: August 14, 2026 - 5:00 PM:
+We will charge an additional fee of Rs. 200 each to make any changes related to name, DOB, photo, signature, SC/ST and PWD certificates after the last date of data changes.
+The following 6 fields can be changed (until the form closes) ONLY when there are NO courses in the course cart. And you will be able to edit those fields only if you: -
+REMOVE unpaid courses from the cart And/or - CANCEL paid courses
+1. Do you come under the SC/ST category? *
+2. SC/ST Proof
+3. Are you a person with disabilities? *
+4. Are you a person with disabilities above 40%?
+5. Disabilities Proof
+6. What is your role?
+Note: Once you remove or cancel a course, you will be able to edit these fields immediately.
+But, for canceled courses, refund of fees will be initiated only after 2 weeks.
+15. LAST DATE FOR CANCELING EXAMS and getting a refund: August 14, 2026 - 5:00 PM
+16. Click here to view Timeline and Guideline : Guideline
+Domain Certification
+Domain Certification helps learners to gain expertise in a specific Area/Domain. This can be helpful for learners who wish to work in a particular area as part of their job or research or for those appearing for some competitive exam or becoming job ready or specialising in an area of study.
+Every domain will comprise Core courses and Elective courses. Once a learner completes the requisite courses per the mentioned criteria, you will receive a Domain Certificate showcasing your scores and the domain of expertise. Kindly refer to the following link for the list of courses available under each domain: https://nptel.ac.in/domains
+Outside India Candidates
+Candidates who are residing outside India may also fill the exam form and pay the fees. Mode of exam and other details will be communicated to you separately.
+Thanks & Regards,
+NPTEL TEAM",https://nptel.ac.in/domains,Legitimate,Legitimate,57,True,2026-07-04T09:51:08.776965Z,user_ui

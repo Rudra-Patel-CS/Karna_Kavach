@@ -141,6 +141,13 @@ def hybrid_analyze(sender: str, subject: str, body: str, reply_to: str = "", att
 
 
 if __name__ == "__main__":
+    if hasattr(sys.stdin, 'reconfigure'):
+        sys.stdin.reconfigure(encoding='utf-8', errors='replace')
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    if hasattr(sys.stderr, 'reconfigure'):
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
     try:
         raw = sys.stdin.read()
         if not raw.strip():

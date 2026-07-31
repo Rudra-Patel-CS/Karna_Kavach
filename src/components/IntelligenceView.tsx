@@ -7,9 +7,10 @@ import { PieChart, Pie, Cell, ResponsiveContainer, RadarChart, PolarGrid, PolarA
 
 interface IntelligenceViewProps {
   scan: Scan | null;
+  user?: { displayName?: string | null; email?: string | null } | null;
 }
 
-export default function IntelligenceView({ scan }: IntelligenceViewProps) {
+export default function IntelligenceView({ scan, user }: IntelligenceViewProps) {
   const [exportFormat, setExportFormat] = useState("JSON");
   const [showPreview, setShowPreview] = useState(false);
 
@@ -107,255 +108,604 @@ export default function IntelligenceView({ scan }: IntelligenceViewProps) {
   };
 
   const generatePDF = () => {
-    const doc = new jsPDF();
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 15;
+    const margin = 20;
     const contentWidth = pageWidth - margin * 2;
-    let yPos = 15;
+    let yPos = margin;
+    let sectionCounter = 0;
 
+    // ── Print-Friendly Color Palette ──
+    const C = {
+      primary:      [43, 84, 126]   as [number, number, number],
+      primaryLight: [232, 236, 240] as [number, number, number],
+      dark:         [26, 26, 26]    as [number, number, number],
+      body:         [55, 65, 81]    as [number, number, number],
+      muted:        [107, 114, 128] as [number, number, number],
+      light:        [156, 163, 175] as [number, number, number],
+      border:       [209, 213, 219] as [number, number, number],
+      rowAlt:       [247, 248, 250] as [number, number, number],
+      white:        [255, 255, 255] as [number, number, number],
+      success:      [22, 163, 74]   as [number, number, number],
+      successBg:    [240, 253, 244] as [number, number, number],
+      warning:      [161, 98, 7]    as [number, number, number],
+      warningBg:    [254, 252, 232] as [number, number, number],
+      danger:       [185, 28, 28]   as [number, number, number],
+      dangerBg:     [254, 242, 242] as [number, number, number],
+      mlBlue:       [59, 130, 246]  as [number, number, number],
+      ruleViolet:   [124, 58, 237]  as [number, number, number],
+      aiSky:        [14, 165, 233]  as [number, number, number],
+    };
+
+    const riskColor = (): [number, number, number] => isHighRisk ? C.danger : isMediumRisk ? C.warning : C.success;
+    const riskBg    = (): [number, number, number] => isHighRisk ? C.dangerBg : isMediumRisk ? C.warningBg : C.successBg;
+    const verdictLabel = (): string => isHighRisk ? "PHISHING" : isMediumRisk ? "SUSPICIOUS" : "SAFE";
+
+    // ── Continuation header for pages 2+ ──
+    const drawContinuationHeader = () => {
+      doc.setFillColor(...C.primary);
+      doc.rect(margin, 10, contentWidth, 7, "F");
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...C.white);
+      doc.text("KARNAKAVACH  \u2014  PHISHING THREAT INTELLIGENCE REPORT", margin + 3, 15);
+      doc.setFont("helvetica", "normal");
+      const idShort = scan.id.length > 24 ? scan.id.slice(0, 24) + "..." : scan.id;
+      doc.text(`Report ID: ${idShort}`, margin + contentWidth - 50, 15);
+      yPos = 24;
+    };
+
+    // ── Page-break helper ──
     const checkNewPage = (needed: number) => {
-      if (yPos + needed > pageHeight - 20) {
+      if (yPos + needed > pageHeight - 25) {
         doc.addPage();
-        yPos = 15;
-        drawPageBorder();
+        drawContinuationHeader();
       }
     };
 
-    const drawPageBorder = () => {
-      doc.setDrawColor(0, 219, 233);
-      doc.setLineWidth(0.5);
-      doc.rect(8, 8, pageWidth - 16, pageHeight - 16);
-      doc.setDrawColor(99, 102, 241);
-      doc.setLineWidth(0.2);
-      doc.rect(10, 10, pageWidth - 20, pageHeight - 20);
-    };
-
-    const drawSectionHeader = (title: string) => {
-      checkNewPage(15);
-      doc.setFillColor(15, 23, 42);
-      doc.rect(margin, yPos - 3, contentWidth, 10, "F");
-      doc.setDrawColor(0, 219, 233);
-      doc.setLineWidth(0.3);
-      doc.line(margin, yPos + 7, margin + contentWidth, yPos + 7);
+    // ── Section title ──
+    const drawSectionTitle = (title: string) => {
+      sectionCounter++;
+      checkNewPage(18);
+      yPos += 5;
+      doc.setFillColor(...C.primaryLight);
+      doc.rect(margin, yPos - 1, contentWidth, 9, "F");
+      doc.setFillColor(...C.primary);
+      doc.rect(margin, yPos - 1, 1.5, 9, "F");
       doc.setFontSize(11);
       doc.setFont("helvetica", "bold");
-      doc.setTextColor(0, 219, 233);
-      doc.text(title.toUpperCase(), margin + 3, yPos + 4);
+      doc.setTextColor(...C.primary);
+      doc.text(`${sectionCounter}. ${title.toUpperCase()}`, margin + 5, yPos + 5.5);
       yPos += 14;
     };
 
-    // ── Page border ──
-    drawPageBorder();
-
-    // ── Header logo area ──
-    doc.setFillColor(10, 15, 30);
-    doc.rect(margin, yPos, contentWidth, 28, "F");
-    doc.setDrawColor(0, 219, 233);
-    doc.setLineWidth(0.3);
-    doc.rect(margin, yPos, contentWidth, 28);
-
-    // Shield icon (vector approximation)
-    doc.setFillColor(0, 219, 233);
-    doc.circle(margin + 14, yPos + 14, 8, "F");
-    doc.setFillColor(10, 15, 30);
-    doc.circle(margin + 14, yPos + 14, 6, "F");
-    doc.setFillColor(0, 219, 233);
-    doc.circle(margin + 14, yPos + 14, 3, "F");
-
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(255, 255, 255);
-    doc.text("KARNAKAVACH", margin + 26, yPos + 11);
-    doc.setFontSize(8);
-    doc.setTextColor(0, 219, 233);
-    doc.text("PHISHING THREAT INTELLIGENCE AUDIT REPORT", margin + 26, yPos + 18);
-
-    doc.setFontSize(7);
-    doc.setTextColor(150, 150, 150);
-    doc.text(`Generated: ${new Date().toLocaleString()}`, margin + contentWidth - 55, yPos + 11);
-    doc.text(`Report ID: ${scan.id}`, margin + contentWidth - 55, yPos + 18);
-    yPos += 35;
-
-    // ── Severity Badge ──
-    const riskR = isHighRisk ? 239 : isMediumRisk ? 234 : 34;
-    const riskG = isHighRisk ? 68 : isMediumRisk ? 179 : 197;
-    const riskB = isHighRisk ? 68 : isMediumRisk ? 8 : 94;
-
-    doc.setFillColor(riskR, riskG, riskB);
-    doc.roundedRect(margin, yPos, contentWidth, 16, 2, 2, "F");
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(255, 255, 255);
-    doc.text(`VERDICT: ${scan.riskLevel} RISK  —  SCORE: ${scan.riskScore}/100  —  CONFIDENCE: ${scan.confidence}%`, margin + 5, yPos + 11);
-    yPos += 24;
-
-    // ── Metadata Grid ──
-    drawSectionHeader("Email Metadata");
-    const metaRows = [
-      ["Sender", scan.sender],
-      ["Subject", scan.subject],
-      ["Date Analyzed", new Date(scan.createdAt).toLocaleString()],
-      ["Engine Used", scan.engine || "Hybrid"],
-      ["Threat Category", scan.threatCategory || "General Phishing"],
-      ["Reply-To", scan.replyTo || "N/A"],
-    ];
-
-    metaRows.forEach(([label, value], idx) => {
-      checkNewPage(8);
-      if (idx % 2 === 0) {
-        doc.setFillColor(245, 245, 245);
-        doc.rect(margin, yPos - 4, contentWidth, 8, "F");
+    // ── Key-value table row ──
+    const drawKVRow = (label: string, value: string, isAlt: boolean) => {
+      checkNewPage(9);
+      const rowH = 8;
+      if (isAlt) {
+        doc.setFillColor(...C.rowAlt);
+        doc.rect(margin, yPos, contentWidth, rowH, "F");
       }
+      doc.setDrawColor(...C.border);
+      doc.setLineWidth(0.15);
+      doc.rect(margin, yPos, 50, rowH);
+      doc.rect(margin + 50, yPos, contentWidth - 50, rowH);
       doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
-      doc.setTextColor(80, 80, 80);
-      doc.text(label, margin + 3, yPos);
+      doc.setTextColor(...C.primary);
+      doc.text(label, margin + 3, yPos + 5.5);
       doc.setFont("helvetica", "normal");
-      doc.setTextColor(30, 30, 30);
-      const valLines = doc.splitTextToSize(value, contentWidth - 55);
-      doc.text(valLines, margin + 50, yPos);
-      yPos += Math.max(valLines.length * 5, 8);
+      doc.setTextColor(...C.dark);
+      const valText = doc.splitTextToSize(value || "N/A", contentWidth - 56);
+      doc.text(valText[0], margin + 53, yPos + 5.5);
+      yPos += rowH;
+    };
+
+    // ── Bordered data table ──
+    const drawBorderedTableRow = (cells: { text: string; width: number }[], isHeader: boolean, isAlt: boolean) => {
+      const rowH = 7;
+      checkNewPage(rowH + 2);
+      if (isHeader) {
+        doc.setFillColor(...C.primary);
+        doc.rect(margin, yPos, contentWidth, rowH, "F");
+        doc.setTextColor(...C.white);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+      } else {
+        if (isAlt) {
+          doc.setFillColor(...C.rowAlt);
+          doc.rect(margin, yPos, contentWidth, rowH, "F");
+        }
+        doc.setTextColor(...C.body);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8.5);
+      }
+      let xOff = margin + 3;
+      cells.forEach(cell => {
+        const t = doc.splitTextToSize(cell.text, cell.width - 5)[0] || "";
+        doc.text(t, xOff, yPos + 5);
+        xOff += cell.width;
+      });
+      doc.setDrawColor(...C.border);
+      doc.setLineWidth(0.15);
+      let bx = margin;
+      cells.forEach(cell => { doc.rect(bx, yPos, cell.width, rowH); bx += cell.width; });
+      yPos += rowH;
+    };
+
+    // ── Horizontal progress bar ──
+    const drawProgressBar = (
+      label: string, value: number, maxVal: number,
+      barColor: [number, number, number],
+      x: number, y: number, barWidth: number
+    ) => {
+      doc.setFontSize(8.5);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...C.body);
+      doc.text(label, x, y);
+      const barY = y + 2;
+      const barH = 4;
+      const pct = Math.min(value / maxVal, 1);
+      doc.setFillColor(...C.primaryLight);
+      doc.roundedRect(x, barY, barWidth, barH, 1.5, 1.5, "F");
+      if (pct > 0) {
+        doc.setFillColor(...barColor);
+        doc.roundedRect(x, barY, Math.max(barWidth * pct, 3), barH, 1.5, 1.5, "F");
+      }
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...C.dark);
+      doc.text(`${value}/${maxVal}`, x + barWidth + 3, y + 4);
+    };
+
+    // ══════════════════════════════════════════════════════
+    //  REPORT HEADER
+    // ══════════════════════════════════════════════════════
+
+    // Top accent strip
+    doc.setFillColor(...C.primary);
+    doc.rect(margin, margin, contentWidth, 2, "F");
+    yPos = margin + 6;
+
+    // Shield icon
+    const cx = margin + 10, cy = yPos + 8;
+    doc.setFillColor(...C.primary);
+    doc.circle(cx, cy, 7, "F");
+    doc.setFillColor(...C.white);
+    doc.circle(cx, cy, 5.5, "F");
+    doc.setFillColor(...C.primary);
+    doc.circle(cx, cy, 3, "F");
+    doc.setFillColor(...C.white);
+    doc.circle(cx, cy, 1.5, "F");
+
+    // Title text
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...C.dark);
+    doc.text("KARNAKAVACH", margin + 22, yPos + 6);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...C.primary);
+    doc.text("Phishing Threat Intelligence Report", margin + 22, yPos + 13);
+    yPos += 20;
+
+    // Separator
+    doc.setDrawColor(...C.border);
+    doc.setLineWidth(0.3);
+    doc.line(margin, yPos, margin + contentWidth, yPos);
+    yPos += 5;
+
+    // Metadata grid
+    const headerMeta: [string, string][] = [
+      ["Report ID",       scan.id],
+      ["Generated",       new Date().toLocaleString()],
+      ["Report Version",  "1.0"],
+      ["Analysis Engine", scan.engine || "Hybrid"],
+      ["Analyst",         user?.displayName || user?.email || "System Generated"],
+    ];
+    doc.setFontSize(8);
+    headerMeta.forEach(([label, value], idx) => {
+      const col = idx % 2 === 0 ? 0 : contentWidth / 2;
+      const row = Math.floor(idx / 2);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...C.muted);
+      doc.text(`${label}:`, margin + col, yPos + row * 5);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...C.dark);
+      const truncVal = value.length > 38 ? value.slice(0, 35) + "..." : value;
+      doc.text(truncVal, margin + col + 28, yPos + row * 5);
+    });
+    yPos += Math.ceil(headerMeta.length / 2) * 5 + 4;
+
+    // Bottom accent bar
+    doc.setFillColor(...C.primary);
+    doc.rect(margin, yPos, contentWidth, 0.8, "F");
+    yPos += 6;
+
+    // ══════════════════════════════════════════════════════
+    //  1. EXECUTIVE SUMMARY
+    // ══════════════════════════════════════════════════════
+    drawSectionTitle("Executive Summary");
+    checkNewPage(32);
+
+    const rc = riskColor();
+    const rb = riskBg();
+    const vLabel = verdictLabel();
+
+    // Summary box with soft tint background
+    doc.setDrawColor(...rc);
+    doc.setLineWidth(0.6);
+    doc.setFillColor(...rb);
+    doc.roundedRect(margin, yPos, contentWidth, 28, 2, 2, "FD");
+
+    // Verdict badge pill
+    doc.setFillColor(...rc);
+    doc.roundedRect(margin + 4, yPos + 3, 30, 8, 1.5, 1.5, "F");
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...C.white);
+    doc.text(vLabel, margin + 19, yPos + 8.5, { align: "center" });
+
+    // Verdict heading
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...C.dark);
+    doc.text(`Overall Verdict: ${scan.riskLevel} RISK`, margin + 38, yPos + 8.5);
+
+    // Metrics row
+    doc.setFontSize(8.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...C.body);
+    doc.text(`Risk Score: ${scan.riskScore}/100`, margin + 6, yPos + 16);
+    doc.text(`Confidence: ${scan.confidence}%`, margin + 55, yPos + 16);
+    doc.text(`Threat Category: ${scan.threatCategory || "General Phishing"}`, margin + 100, yPos + 16);
+
+    // Summary one-liner
+    doc.setFontSize(8);
+    doc.setTextColor(...C.muted);
+    const briefSummary = doc.splitTextToSize(scan.summary, contentWidth - 12);
+    doc.text(briefSummary[0] + (briefSummary.length > 1 ? "..." : ""), margin + 6, yPos + 23);
+    yPos += 34;
+
+    // ══════════════════════════════════════════════════════
+    //  2. EMAIL DETAILS
+    // ══════════════════════════════════════════════════════
+    drawSectionTitle("Email Details");
+
+    const attachCount = scan.attachments ? scan.attachments.length : 0;
+    const attachNames = scan.attachments ? scan.attachments.map(a => a.filename).join(", ") : "None";
+    const urlCount = scan.urlAnalysis ? scan.urlAnalysis.length : 0;
+
+    const emailRows: [string, string][] = [
+      ["Sender",       scan.sender],
+      ["Reply-To",     scan.replyTo || "Same as sender"],
+      ["Subject",      scan.subject],
+      ["Date Analyzed", new Date(scan.createdAt).toLocaleString()],
+      ["Recipient",    user?.email || "Current User"],
+      ["Attachments",  attachCount > 0 ? `${attachCount} \u2014 ${attachNames}` : "None"],
+      ["Links Found",  `${urlCount} URL(s) detected`],
+      ["Engine Used",  scan.engine || "Hybrid"],
+    ];
+    emailRows.forEach(([l, v], i) => drawKVRow(l, v, i % 2 === 0));
+    yPos += 4;
+
+    // ══════════════════════════════════════════════════════
+    //  3. URL ANALYSIS  (conditional)
+    // ══════════════════════════════════════════════════════
+    if (scan.urlAnalysis && scan.urlAnalysis.length > 0) {
+      drawSectionTitle("URL Analysis");
+
+      const cw = [70, 25, 40, 20, 15];
+      drawBorderedTableRow([
+        { text: "URL", width: cw[0] }, { text: "PROTOCOL", width: cw[1] },
+        { text: "DOMAIN", width: cw[2] }, { text: "HTTPS", width: cw[3] },
+        { text: "RISK", width: cw[4] },
+      ], true, false);
+
+      scan.urlAnalysis.forEach((u, idx) => {
+        let protocol = "HTTP", domain = u.url, isHttps = "No";
+        try {
+          const p = new URL(u.url);
+          protocol = p.protocol.replace(":", "").toUpperCase();
+          domain = p.hostname;
+          isHttps = p.protocol === "https:" ? "Yes" : "No";
+        } catch { /* invalid URL */ }
+        drawBorderedTableRow([
+          { text: u.url, width: cw[0] }, { text: protocol, width: cw[1] },
+          { text: domain, width: cw[2] }, { text: isHttps, width: cw[3] },
+          { text: u.classification || "Unknown", width: cw[4] },
+        ], false, idx % 2 === 0);
+      });
+
+      // Findings detail below table
+      scan.urlAnalysis.forEach(u => {
+        if (u.reasons && u.reasons.length > 0) {
+          checkNewPage(10);
+          doc.setFontSize(8);
+          doc.setFont("helvetica", "italic");
+          doc.setTextColor(...C.muted);
+          const tUrl = u.url.length > 60 ? u.url.slice(0, 57) + "..." : u.url;
+          doc.text(`Findings for: ${tUrl}`, margin + 2, yPos + 2);
+          yPos += 5;
+          u.reasons.forEach((r: string) => {
+            const rL = doc.splitTextToSize(`  \u2022 ${r}`, contentWidth - 10);
+            rL.forEach((ln: string) => { checkNewPage(5); doc.setFont("helvetica", "normal"); doc.setTextColor(...C.body); doc.text(ln, margin + 5, yPos + 2); yPos += 4; });
+          });
+          yPos += 2;
+        }
+      });
+      yPos += 2;
+    }
+
+    // ══════════════════════════════════════════════════════
+    //  4. THREAT ANALYSIS
+    // ══════════════════════════════════════════════════════
+    drawSectionTitle("Threat Analysis");
+    checkNewPage(40);
+
+    drawProgressBar("Overall Risk Score", scan.riskScore, 100, riskColor(), margin + 3, yPos, 100);
+    yPos += 12;
+    drawProgressBar("Analysis Confidence", scan.confidence, 100, C.primary, margin + 3, yPos, 100);
+    yPos += 12;
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...C.body);
+    doc.text("Threat Category:", margin + 3, yPos);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...C.dark);
+    doc.text(scan.threatCategory || "General Phishing", margin + 40, yPos);
+    yPos += 7;
+
+    // Score breakdown
+    if (scan.scoreBreakdown) {
+      yPos += 2;
+      doc.setDrawColor(...C.border);
+      doc.setLineWidth(0.15);
+      doc.line(margin, yPos, margin + contentWidth, yPos);
+      yPos += 6;
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...C.primary);
+      doc.text("Hybrid Score Breakdown", margin + 3, yPos);
+      yPos += 7;
+
+      drawProgressBar(`Rule Engine (Weight: ${(scan.scoreBreakdown.weights.rule * 100).toFixed(0)}%)`, scan.scoreBreakdown.rule, 100, C.ruleViolet, margin + 3, yPos, 90);
+      yPos += 12;
+      drawProgressBar(`ML Model (Weight: ${(scan.scoreBreakdown.weights.ml * 100).toFixed(0)}%)`, scan.scoreBreakdown.ml, 100, C.mlBlue, margin + 3, yPos, 90);
+      yPos += 12;
+      if (scan.scoreBreakdown.ai !== null) {
+        drawProgressBar(`Gemini AI (Weight: ${(scan.scoreBreakdown.weights.ai * 100).toFixed(0)}%)`, scan.scoreBreakdown.ai, 100, C.aiSky, margin + 3, yPos, 90);
+        yPos += 12;
+      }
+    }
+
+    // ML / Rule result details
+    if (scan.mlResult || scan.ruleResult) {
+      yPos += 2;
+      doc.setDrawColor(...C.border);
+      doc.setLineWidth(0.15);
+      doc.line(margin, yPos, margin + contentWidth, yPos);
+      yPos += 6;
+      if (scan.mlResult) {
+        doc.setFontSize(8.5);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...C.body);
+        doc.text(`ML Verdict: ${scan.mlResult.verdict}`, margin + 3, yPos);
+        doc.setFont("helvetica", "normal");
+        doc.text(`  (Confidence: ${scan.mlResult.confidence}%, Score: ${scan.mlResult.score}/100)`, margin + 42, yPos);
+        yPos += 6;
+      }
+      if (scan.ruleResult) {
+        doc.setFontSize(8.5);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...C.body);
+        doc.text(`Rule Engine Score: ${scan.ruleResult.score}/100`, margin + 3, yPos);
+        doc.setFont("helvetica", "normal");
+        doc.text(`  Category: ${scan.ruleResult.category}  |  Urgency: ${scan.ruleResult.urgency}/10`, margin + 50, yPos);
+        yPos += 6;
+      }
+    }
+    yPos += 4;
+
+    // ══════════════════════════════════════════════════════
+    //  5. DETECTED INDICATORS
+    // ══════════════════════════════════════════════════════
+    if (scan.threatVectors && scan.threatVectors.length > 0) {
+      drawSectionTitle("Detected Indicators");
+
+      const iw = [55, 30, 30, 55];
+      drawBorderedTableRow([
+        { text: "INDICATOR", width: iw[0] }, { text: "SEVERITY", width: iw[1] },
+        { text: "STATUS", width: iw[2] }, { text: "DESCRIPTION", width: iw[3] },
+      ], true, false);
+
+      scan.threatVectors.forEach((v, idx) => {
+        const sev = v.type === "critical" ? "CRITICAL" : v.type === "warning" ? "WARNING" : v.type === "info" ? "INFO" : "PASS";
+        const sts = v.type === "critical" || v.type === "warning" ? "DETECTED" : "CLEAR";
+        drawBorderedTableRow([
+          { text: v.title, width: iw[0] }, { text: sev, width: iw[1] },
+          { text: sts, width: iw[2] }, { text: v.description, width: iw[3] },
+        ], false, idx % 2 === 0);
+      });
+      yPos += 4;
+    }
+
+    // ══════════════════════════════════════════════════════
+    //  6. ANALYSIS EXPLANATION
+    // ══════════════════════════════════════════════════════
+    drawSectionTitle("Analysis Explanation");
+
+    const explTitle = isHighRisk
+      ? "Why This Email Is Classified as Phishing"
+      : isMediumRisk
+      ? "Why This Email Is Classified as Suspicious"
+      : "Why This Email Is Classified as Safe";
+
+    checkNewPage(12);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...C.dark);
+    doc.text(explTitle, margin + 3, yPos);
+    yPos += 6;
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...C.body);
+    const explLines = doc.splitTextToSize(scan.summary || "No detailed analysis available.", contentWidth - 6);
+    explLines.forEach((ln: string) => { checkNewPage(5); doc.text(ln, margin + 3, yPos); yPos += 4.5; });
+    yPos += 4;
+
+    // Key observations from comparison data
+    if (scan.comparison) {
+      checkNewPage(16);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...C.dark);
+      doc.text("Key Observations", margin + 3, yPos);
+      yPos += 6;
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...C.body);
+      const obs = [
+        `ML Engine Verdict: ${scan.comparison.mlResult.verdict} (Confidence: ${scan.comparison.mlResult.confidence}%)`,
+        scan.comparison.aiResult
+          ? `AI Engine Verdict: ${scan.comparison.aiResult.verdict} (Confidence: ${scan.comparison.aiResult.confidence}%)`
+          : "AI Engine: Not used in this analysis",
+        `Engine Agreement: ${scan.comparison.agreement ? "Yes \u2014 Both engines agree" : "No \u2014 Engines disagree"}`,
+        `Reasoning: ${scan.comparison.reason}`,
+      ];
+      obs.forEach(o => {
+        const oL = doc.splitTextToSize(`\u2022 ${o}`, contentWidth - 10);
+        oL.forEach((ln: string) => { checkNewPage(5); doc.text(ln, margin + 5, yPos); yPos += 4.5; });
+      });
+      yPos += 4;
+    }
+
+    // ══════════════════════════════════════════════════════
+    //  7. SECURITY RECOMMENDATIONS
+    // ══════════════════════════════════════════════════════
+    drawSectionTitle("Security Recommendations");
+
+    recommendations.forEach((rec, idx) => {
+      checkNewPage(10);
+      // Severity dot
+      const dotC = isHighRisk ? C.danger : isMediumRisk ? C.warning : C.success;
+      doc.setFillColor(...dotC);
+      doc.circle(margin + 5, yPos + 1, 1.5, "F");
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...C.dark);
+      const rL = doc.splitTextToSize(`${idx + 1}. ${rec}`, contentWidth - 15);
+      rL.forEach((ln: string, li: number) => { if (li > 0) checkNewPage(5); doc.text(ln, margin + 10, yPos + 2); yPos += 5; });
+      yPos += 1.5;
     });
     yPos += 4;
 
-    // ── Executive Summary ──
-    drawSectionHeader("Executive Summary");
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(40, 40, 40);
-    const summaryLines = doc.splitTextToSize(scan.summary, contentWidth - 6);
-    summaryLines.forEach((line: string) => {
-      checkNewPage(6);
-      doc.text(line, margin + 3, yPos);
-      yPos += 5;
-    });
-    yPos += 6;
+    // ══════════════════════════════════════════════════════
+    //  8. RISK VISUALIZATION
+    // ══════════════════════════════════════════════════════
+    drawSectionTitle("Risk Visualization");
+    checkNewPage(42);
 
-    // ── Threat Vectors Table ──
-    if (scan.threatVectors && scan.threatVectors.length > 0) {
-      drawSectionHeader("Identified Threat Vectors");
-
-      // Table header
-      checkNewPage(10);
-      doc.setFillColor(30, 41, 59);
-      doc.rect(margin, yPos - 4, contentWidth, 8, "F");
+    const boxW = (contentWidth - 8) / 3;
+    const boxH = 30;
+    const boxY = yPos;
+    const vizMetrics = [
+      { label: "Overall Risk",    value: scan.riskScore,                                      max: 100, color: riskColor() },
+      { label: "Confidence",      value: scan.confidence,                                     max: 100, color: C.primary },
+      { label: "Threat Severity", value: isHighRisk ? 90 : isMediumRisk ? 55 : 20,            max: 100, color: riskColor() },
+    ];
+    vizMetrics.forEach((m, idx) => {
+      const bx = margin + idx * (boxW + 4);
+      doc.setDrawColor(...C.border);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(bx, boxY, boxW, boxH, 1.5, 1.5, "S");
       doc.setFontSize(8);
       doc.setFont("helvetica", "bold");
-      doc.setTextColor(255, 255, 255);
-      doc.text("VECTOR", margin + 3, yPos);
-      doc.text("CATEGORY", margin + 80, yPos);
-      doc.text("SEVERITY", margin + 120, yPos);
-      doc.text("DESCRIPTION", margin + 145, yPos);
-      yPos += 7;
-
-      scan.threatVectors.forEach((v, idx) => {
-        checkNewPage(12);
-        if (idx % 2 === 0) {
-          doc.setFillColor(248, 248, 248);
-          doc.rect(margin, yPos - 4, contentWidth, 10, "F");
-        }
-        doc.setFontSize(8);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(30, 30, 30);
-        const titleLines = doc.splitTextToSize(v.title, 70);
-        doc.text(titleLines[0], margin + 3, yPos);
-        doc.setFont("helvetica", "normal");
-        doc.text(v.badge, margin + 80, yPos);
-        doc.setTextColor(v.type === "critical" ? 239 : 99, v.type === "critical" ? 68 : 102, v.type === "critical" ? 68 : 241);
-        doc.text(v.type.toUpperCase(), margin + 120, yPos);
-        doc.setTextColor(80, 80, 80);
-        const descLines = doc.splitTextToSize(v.description, 35);
-        doc.text(descLines[0], margin + 145, yPos);
-        yPos += 10;
-      });
-      yPos += 4;
-    }
-
-    // ── URL Analysis Table ──
-    if (scan.urlAnalysis && scan.urlAnalysis.length > 0) {
-      drawSectionHeader("URL Analysis Results");
-
-      scan.urlAnalysis.forEach((u) => {
-        checkNewPage(20);
-        doc.setFontSize(9);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(30, 30, 30);
-        const urlLines = doc.splitTextToSize(u.url, contentWidth - 6);
-        doc.text(urlLines, margin + 3, yPos);
-        yPos += urlLines.length * 5;
-
-        doc.setFont("helvetica", "italic");
-        doc.setTextColor(riskR, riskG, riskB);
-        doc.text(`Classification: ${u.classification}`, margin + 5, yPos);
-        yPos += 6;
-
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(80, 80, 80);
-        u.reasons.forEach((r: string) => {
-          checkNewPage(6);
-          const rLines = doc.splitTextToSize(`→ ${r}`, contentWidth - 15);
-          doc.text(rLines, margin + 8, yPos);
-          yPos += rLines.length * 5;
-        });
-        yPos += 6;
-      });
-    }
-
-    // ── Recommendations ──
-    drawSectionHeader("Security Recommendations");
-    recommendations.forEach((rec, idx) => {
-      checkNewPage(8);
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(40, 40, 40);
-      const recLines = doc.splitTextToSize(`${idx + 1}. ${rec}`, contentWidth - 10);
-      recLines.forEach((line: string) => {
-        checkNewPage(5);
-        doc.text(line, margin + 5, yPos);
-        yPos += 5;
-      });
-      yPos += 2;
-    });
-
-    // ── Score Breakdown ──
-    if (scan.scoreBreakdown) {
-      drawSectionHeader("Score Breakdown (Hybrid Fusion)");
-      const breakdownRows = [
-        ["Rule Engine Score", `${scan.scoreBreakdown.rule}/100`, `Weight: ${(scan.scoreBreakdown.weights.rule * 100).toFixed(0)}%`],
-        ["ML Model Score", `${scan.scoreBreakdown.ml}/100`, `Weight: ${(scan.scoreBreakdown.weights.ml * 100).toFixed(0)}%`],
-        ["AI (Gemini) Score", scan.scoreBreakdown.ai !== null ? `${scan.scoreBreakdown.ai}/100` : "N/A", `Weight: ${(scan.scoreBreakdown.weights.ai * 100).toFixed(0)}%`],
-      ];
-      breakdownRows.forEach(([label, value, weight], idx) => {
-        checkNewPage(8);
-        if (idx % 2 === 0) {
-          doc.setFillColor(245, 245, 245);
-          doc.rect(margin, yPos - 4, contentWidth, 8, "F");
-        }
-        doc.setFontSize(9);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(60, 60, 60);
-        doc.text(label, margin + 3, yPos);
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(30, 30, 30);
-        doc.text(value, margin + 70, yPos);
-        doc.setTextColor(100, 100, 100);
-        doc.text(weight, margin + 110, yPos);
-        yPos += 8;
-      });
-      yPos += 4;
-    }
-
-    // ── Footer ──
-    const totalPages = doc.getNumberOfPages();
-    for (let i = 1; i <= totalPages; i++) {
-      doc.setPage(i);
+      doc.setTextColor(...C.muted);
+      doc.text(m.label.toUpperCase(), bx + boxW / 2, boxY + 6, { align: "center" });
+      doc.setFontSize(18);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...m.color);
+      doc.text(`${m.value}`, bx + boxW / 2, boxY + 16, { align: "center" });
       doc.setFontSize(7);
-      doc.setTextColor(150, 150, 150);
-      doc.text(`KarnaKavach Threat Intelligence Platform — Confidential Security Report — Page ${i}/${totalPages}`, pageWidth / 2, pageHeight - 12, { align: "center" });
-      doc.setDrawColor(0, 219, 233);
-      doc.setLineWidth(0.2);
-      doc.line(margin, pageHeight - 16, pageWidth - margin, pageHeight - 16);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...C.light);
+      doc.text(`/ ${m.max}`, bx + boxW / 2, boxY + 21, { align: "center" });
+      const pbX = bx + 5, pbY2 = boxY + boxH - 6, pbW = boxW - 10, pbH2 = 3;
+      doc.setFillColor(...C.primaryLight);
+      doc.roundedRect(pbX, pbY2, pbW, pbH2, 1, 1, "F");
+      doc.setFillColor(...m.color);
+      doc.roundedRect(pbX, pbY2, Math.max(pbW * (m.value / m.max), 2), pbH2, 1, 1, "F");
+    });
+    yPos = boxY + boxH + 8;
+
+    // ══════════════════════════════════════════════════════
+    //  9. ANALYSIS METHODOLOGY
+    // ══════════════════════════════════════════════════════
+    drawSectionTitle("Analysis Methodology");
+    checkNewPage(50);
+
+    const steps = [
+      { n: "1", t: "Input Validation",    d: "Email headers, body, and metadata are parsed and validated." },
+      { n: "2", t: "Feature Extraction",  d: "Key indicators like URLs, sender reputation, and language patterns are extracted." },
+      { n: "3", t: "Rule Engine",         d: "Deterministic rules evaluate known phishing patterns and heuristics." },
+      { n: "4", t: "Machine Learning",    d: "TF-IDF vectorized content is classified by the trained ML model." },
+      { n: "5", t: "Gemini AI",           d: "Google's Gemini AI provides contextual threat intelligence analysis." },
+      { n: "6", t: "Hybrid Decision",     d: "Weighted fusion of all engines produces the final verdict and confidence." },
+    ];
+    steps.forEach((s, idx) => {
+      checkNewPage(14);
+      doc.setFillColor(...C.primary);
+      doc.circle(margin + 6, yPos + 2.5, 4, "F");
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...C.white);
+      doc.text(s.n, margin + 6, yPos + 3.8, { align: "center" });
+      doc.setFontSize(9.5);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...C.dark);
+      doc.text(s.t, margin + 14, yPos + 2);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...C.muted);
+      doc.text(s.d, margin + 14, yPos + 7);
+      if (idx < steps.length - 1) {
+        doc.setDrawColor(...C.border);
+        doc.setLineWidth(0.3);
+        doc.line(margin + 6, yPos + 6.5, margin + 6, yPos + 12.5);
+      }
+      yPos += 13;
+    });
+    yPos += 4;
+
+    // ══════════════════════════════════════════════════════
+    //  FOOTER ON ALL PAGES
+    // ══════════════════════════════════════════════════════
+    const totalPages = doc.getNumberOfPages();
+    for (let pg = 1; pg <= totalPages; pg++) {
+      doc.setPage(pg);
+      doc.setDrawColor(...C.border);
+      doc.setLineWidth(0.3);
+      doc.line(margin, pageHeight - 18, margin + contentWidth, pageHeight - 18);
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...C.primary);
+      doc.text("KARNAKAVACH", margin, pageHeight - 14);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...C.light);
+      doc.text("Confidential Security Report", pageWidth / 2, pageHeight - 14, { align: "center" });
+      doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth / 2, pageHeight - 10, { align: "center" });
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...C.muted);
+      doc.text(`Page ${pg} of ${totalPages}`, margin + contentWidth, pageHeight - 14, { align: "right" });
+      doc.setFontSize(6);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...C.light);
+      doc.text(`\u00A9 ${new Date().getFullYear()} KarnaKavach \u2014 All Rights Reserved`, margin + contentWidth, pageHeight - 10, { align: "right" });
     }
 
     doc.save(`KarnaKavach_Audit_${scan.id}.pdf`);

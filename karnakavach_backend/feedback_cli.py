@@ -106,12 +106,20 @@ def save_feedback(data: dict) -> dict:
 
 
 if __name__ == "__main__":
+    if hasattr(sys.stdin, 'reconfigure'):
+        sys.stdin.reconfigure(encoding='utf-8', errors='replace')
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    if hasattr(sys.stderr, 'reconfigure'):
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
     try:
         raw = sys.stdin.read()
         if not raw.strip():
             print(json.dumps({"success": False, "error": "No input provided"}))
             sys.exit(1)
         data = json.loads(raw)
+
         result = save_feedback(data)
         print(json.dumps(result))
         sys.exit(0 if result["success"] else 1)
