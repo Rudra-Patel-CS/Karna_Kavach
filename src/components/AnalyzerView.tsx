@@ -82,8 +82,9 @@ export default function AnalyzerView({ onScanComplete, onRequestOpenSettings, us
         setErrorMsg("Heuristic parsing failed. Entire block treated as email body.");
       }
     } catch (err: any) {
-      console.error(err);
-      setErrorMsg("Parsing failed: " + (err.message || "Unknown error"));
+      console.warn("Backend parser failed or unavailable. Falling back to client-side parsing.", err);
+      parseEmlContent(rawEmailText);
+      setErrorMsg("Backend parser is unavailable on this deployment. Fallback client-side heuristic parser was used.");
     } finally {
       setParsingRaw(false);
     }
@@ -226,77 +227,131 @@ export default function AnalyzerView({ onScanComplete, onRequestOpenSettings, us
 
       // Drop images if OCR is disabled
       const effectiveImages = enableOcr ? imagePayloads : [];
-      let response;
       let report;
       const startTime = performance.now();
 
-      if (analysisEngine === "ai") {
-        response = await fetch("/api/analyze", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ sender, subject, body, images: effectiveImages, model, sensitivity, autoUrlScan, language }),
-        });
+      try {
+        let response;
+        if (analysisEngine === "ai") {
+          response = await fetch("/api/analyze", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ sender, subject, body, images: effectiveImages, model, sensitivity, autoUrlScan, language }),
+          });
 
-        if (!response.ok) {
-          throw new Error(await response.text());
+          if (!response.ok) {
+            throw new Error(await response.text());
+          }
+
+          report = await response.json();
+        } else if (analysisEngine === "hybrid") {
+          response = await fetch("/api/hybrid-analyze", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sender, subject, body, model, sensitivity, language, images: effectiveImages, replyTo, attachments }),
+          });
+
+          if (!response.ok) {
+            throw new Error(await response.text());
+          }
+
+          const hybridOutput = await response.json();
+          report = {
+            riskScore:      hybridOutput.riskScore,
+            riskLevel:      hybridOutput.riskLevel,
+            summary:        hybridOutput.summary,
+            confidence:     hybridOutput.confidence,
+            threatVectors:  hybridOutput.threatVectors,
+            threatCategory: hybridOutput.threatCategory,
+            scoreBreakdown: hybridOutput.scoreBreakdown,
+            recommendations: hybridOutput.recommendations,
+            emailIntel:     hybridOutput.emailIntel,
+            mlResult:       hybridOutput.mlResult,
+            ruleResult:     hybridOutput.ruleResult,
+            urlAnalysis:    hybridOutput.urlAnalyses,
+            comparison:     hybridOutput.comparison
+          };
+        } else {
+          response = await fetch("/api/ml-analyze", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sender, subject, body }),
+          });
+
+          if (!response.ok) {
+            throw new Error(await response.text());
+          }
+
+          const mlOutput = await response.json();
+          
+          // Map ML output to UI report format
+          const riskLevel = mlOutput.verdict === "Phishing" ? "HIGH" : "LOW";
+          report = {
+             riskScore: mlOutput.probability,
+             riskLevel: riskLevel,
+             summary: mlOutput.reasons.join("\n") || `The Local ML model has determined this email is ${mlOutput.verdict} with ${mlOutput.confidence}% confidence.`,
+             confidence: mlOutput.confidence,
+             threatVectors: mlOutput.reasons.length > 0 ? mlOutput.reasons.map((r:string, i:number) => ({
+                title: i===0?"Primary Keyword Driver":"Secondary Findings",
+                description: r,
+                badge: riskLevel==="HIGH" ? "Trigger" : "Clean",
+                type: riskLevel==="HIGH" ? "critical" : "success"
+             })) : [{ title: "Analyzed Text", description: "Model found no specific triggering features in the text or urls.", badge: "Clear", type: "success" }]
+          };
         }
-
-        report = await response.json();
-      } else if (analysisEngine === "hybrid") {
-        response = await fetch("/api/hybrid-analyze", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sender, subject, body, model, sensitivity, language, images: effectiveImages, replyTo, attachments }),
-        });
-
-        if (!response.ok) {
-          throw new Error(await response.text());
-        }
-
-        const hybridOutput = await response.json();
-        report = {
-          riskScore:      hybridOutput.riskScore,
-          riskLevel:      hybridOutput.riskLevel,
-          summary:        hybridOutput.summary,
-          confidence:     hybridOutput.confidence,
-          threatVectors:  hybridOutput.threatVectors,
-          threatCategory: hybridOutput.threatCategory,
-          scoreBreakdown: hybridOutput.scoreBreakdown,
-          recommendations: hybridOutput.recommendations,
-          emailIntel:     hybridOutput.emailIntel,
-          mlResult:       hybridOutput.mlResult,
-          ruleResult:     hybridOutput.ruleResult,
-          urlAnalysis:    hybridOutput.urlAnalyses,
-          comparison:     hybridOutput.comparison
-        };
-      } else {
-        response = await fetch("/api/ml-analyze", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sender, subject, body }),
-        });
-
-        if (!response.ok) {
-          throw new Error(await response.text());
-        }
-
-        const mlOutput = await response.json();
+      } catch (err: any) {
+        console.warn("Backend analysis API unreachable. Running client-side sandboxed simulation fallback.", err);
         
-        // Map ML output to UI report format
-        const riskLevel = mlOutput.verdict === "Phishing" ? "HIGH" : "LOW";
+        // Simple client-side heuristic scanner fallback
+        const combinedText = `${sender} ${subject} ${body}`.toLowerCase();
+        const hasUrgent = combinedText.includes("urgent") || combinedText.includes("immediate") || combinedText.includes("action required") || combinedText.includes("suspended") || combinedText.includes("hold");
+        const hasBrands = combinedText.includes("microsoft") || combinedText.includes("netflix") || combinedText.includes("google") || combinedText.includes("bank") || combinedText.includes("paypal");
+        const hasCredential = combinedText.includes("password") || combinedText.includes("credential") || combinedText.includes("login") || combinedText.includes("reset");
+        const hasLinks = combinedText.includes("http://") || combinedText.includes("https://") || combinedText.includes("click here");
+
+        let score = 5;
+        const vectors: any[] = [];
+        const recommendations: string[] = ["Proceed with standard caution."];
+
+        if (hasUrgent) {
+          score += 25;
+          vectors.push({ title: "Urgent Language", description: "High-pressure or urgent action requested in subject or body.", badge: "Urgency", type: "warning" });
+          recommendations.push("Do not feel pressured by urgent calls to action.");
+        }
+        if (hasBrands) {
+          score += 20;
+          vectors.push({ title: "Brand Identity Check", description: "Email references a prominent service provider/brand.", badge: "Brand Match", type: "info" });
+          recommendations.push("Verify the sender's actual email domain matches the official brand.");
+        }
+        if (hasCredential) {
+          score += 30;
+          vectors.push({ title: "Credential Request", description: "Asks for sensitive login credentials, passwords, or reset details.", badge: "Auth Risk", type: "critical" });
+          recommendations.push("Never supply password credentials via links in emails.");
+        }
+        if (hasLinks) {
+          score += 15;
+          vectors.push({ title: "Embedded Links Detected", description: "Contains hyperlinks that may redirect to target landing pages.", badge: "Link Scan", type: "warning" });
+          recommendations.push("Hover over links to verify their true destination before clicking.");
+        }
+
+        if (score > 100) score = 100;
+        const level = score >= 70 ? "HIGH" : score >= 35 ? "MEDIUM" : "LOW";
+
+        if (vectors.length === 0) {
+          vectors.push({ title: "Behavioral Safe Baseline", description: "Linguistic vectors remain in standard user conversational bounds.", badge: "Clean", type: "success" });
+        }
+
         report = {
-           riskScore: mlOutput.probability,
-           riskLevel: riskLevel,
-           summary: mlOutput.reasons.join("\n") || `The Local ML model has determined this email is ${mlOutput.verdict} with ${mlOutput.confidence}% confidence.`,
-           confidence: mlOutput.confidence,
-           threatVectors: mlOutput.reasons.length > 0 ? mlOutput.reasons.map((r:string, i:number) => ({
-              title: i===0?"Primary Keyword Driver":"Secondary Findings",
-              description: r,
-              badge: riskLevel==="HIGH" ? "Trigger" : "Clean",
-              type: riskLevel==="HIGH" ? "critical" : "success"
-           })) : [{ title: "Analyzed Text", description: "Model found no specific triggering features in the text or urls.", badge: "Clear", type: "success" }]
+          riskScore: score,
+          riskLevel: level,
+          summary: `[SANDBOX SIMULATION MODE]\n\nThe analysis backend is unreachable (typically because static hosting like Vercel does not support custom Node/Python backends).\n\nAnalyzed inputs locally:\n- Sender: "${sender || "Unknown"}"\n- Subject: "${subject || "None"}"\n\nHeuristic results: ${score >= 35 ? "Suspicious indicators found. Proceed with caution." : "No immediate threat indicators found."}`,
+          confidence: 85.0,
+          threatCategory: score >= 70 ? "Credential Theft" : score >= 35 ? "General Phishing" : "Safe",
+          threatVectors: vectors,
+          recommendations: recommendations.filter(r => r !== "Proceed with standard caution." || recommendations.length === 1),
+          urlAnalysis: hasLinks ? [{ url: "Extracted links", classification: score >= 50 ? "Suspicious" : "Clean", risk_score: score, reasons: ["Found in message body"] }] : []
         };
       }
       
