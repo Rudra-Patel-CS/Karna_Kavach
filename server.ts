@@ -639,6 +639,22 @@ app.post("/api/ml-analyze", (req, res) => {
   pyProcess.stdin.end();
 });
 
+// Route to serve Firebase configuration dynamically at runtime to the client
+app.get("/firebase-config.js", (req, res) => {
+  const config = {
+    apiKey:            process.env.VITE_FIREBASE_API_KEY            || process.env.FIREBASE_API_KEY || "",
+    authDomain:        process.env.VITE_FIREBASE_AUTH_DOMAIN        || process.env.FIREBASE_AUTH_DOMAIN || "",
+    projectId:         process.env.VITE_FIREBASE_PROJECT_ID         || process.env.FIREBASE_PROJECT_ID || "",
+    storageBucket:     process.env.VITE_FIREBASE_STORAGE_BUCKET     || process.env.FIREBASE_STORAGE_BUCKET || "",
+    messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID || process.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
+    appId:             process.env.VITE_FIREBASE_APP_ID             || process.env.VITE_FIREBASE_APP_ID || "",
+    measurementId:     process.env.VITE_FIREBASE_MEASUREMENT_ID     || process.env.VITE_FIREBASE_MEASUREMENT_ID || "",
+    databaseId:        process.env.VITE_FIREBASE_DATABASE_ID        || process.env.FIREBASE_DATABASE_ID || ""
+  };
+  res.setHeader("Content-Type", "application/javascript");
+  res.send(`window.FIREBASE_CONFIG = ${JSON.stringify(config)};`);
+});
+
 // Serve frontend assets in production / development
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {

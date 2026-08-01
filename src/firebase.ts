@@ -15,21 +15,23 @@ import {
 } from "firebase/firestore";
 import { createOrUpdateUserProfile } from "./services/userProfile";
 
-// ── Firebase config is loaded from environment variables (VITE_FIREBASE_*)
-// Real values live in .env.local which is NOT committed to git.
+// ── Firebase config is loaded from dynamic runtime settings or environment variables (VITE_FIREBASE_*)
+// Real values live in .env.local (development) or are served dynamically by Express (production).
 // See .env.example for the required keys.
+const globalConfig = (window as any).FIREBASE_CONFIG || {};
+
 const firebaseConfig = {
-  apiKey:            import.meta.env.VITE_FIREBASE_API_KEY            || "",
-  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN        || "",
-  projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID         || "",
-  storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET     || "",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
-  appId:             import.meta.env.VITE_FIREBASE_APP_ID             || "",
-  measurementId:     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID     || "",
+  apiKey:            globalConfig.apiKey            || import.meta.env.VITE_FIREBASE_API_KEY            || "",
+  authDomain:        globalConfig.authDomain        || import.meta.env.VITE_FIREBASE_AUTH_DOMAIN        || "",
+  projectId:         globalConfig.projectId         || import.meta.env.VITE_FIREBASE_PROJECT_ID         || "",
+  storageBucket:     globalConfig.storageBucket     || import.meta.env.VITE_FIREBASE_STORAGE_BUCKET     || "",
+  messagingSenderId: globalConfig.messagingSenderId || import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
+  appId:             globalConfig.appId             || import.meta.env.VITE_FIREBASE_APP_ID             || "",
+  measurementId:     globalConfig.measurementId     || import.meta.env.VITE_FIREBASE_MEASUREMENT_ID     || "",
 };
 
 const firestoreDatabaseId: string =
-  import.meta.env.VITE_FIREBASE_DATABASE_ID || "(default)";
+  globalConfig.databaseId || import.meta.env.VITE_FIREBASE_DATABASE_ID || "(default)";
 
 // isDummy is true when no real Firebase config is present — app runs in offline simulation mode
 const isDummy = !firebaseConfig.apiKey || firebaseConfig.apiKey === "DUMMY_KEY" || firebaseConfig.apiKey === "";
