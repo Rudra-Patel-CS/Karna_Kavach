@@ -18,7 +18,7 @@ process.env.PYTHONUTF8 = "1";
 const app = express();
 app.use(express.json({ limit: "50mb" }));
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Detect python command (python on Windows, python3 on Unix)
 const PYTHON_CMD = process.platform === "win32" ? "python" : "python3";

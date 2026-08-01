@@ -1,0 +1,14 @@
+node_modules
+dist
+.git
+.gitignore
+.vscode
+karnakavach_backend/__pycache__
+karnakavach_backend/**/__pycache__
+.env
+.env.local
+.firebase
+.firebaserc
+firebase-applet-config.json
+firebase-blueprint.json
+firestore.indexes.json
